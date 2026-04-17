@@ -21,7 +21,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-6 p-8">
         <h1 className="text-5xl font-bold tracking-tight">
-          Event<span className="text-brand-600">Pulse</span>
+          Ig<span className="text-brand-600">nyt</span>
         </h1>
         <p className="max-w-md text-center text-lg text-gray-600">
           AI-powered event experience — live engagement, smart check-in, and a
@@ -55,7 +55,7 @@ function AppShell() {
       <header className="sticky top-0 z-10 border-b border-gray-200 bg-white/80 backdrop-blur px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-6">
           <h1 className="text-xl font-bold">
-            Event<span className="text-brand-600">Pulse</span>
+            Ig<span className="text-brand-600">nyt</span>
           </h1>
           <nav className="hidden sm:flex gap-1">
             {NAV_LINKS.map((link) => (

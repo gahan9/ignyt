@@ -11,7 +11,8 @@ and smart check-in — all within a **$3 GCP budget**.
 |---------|---------------------|-------------|
 | Live Engagement Wall | Firestore real-time | Reactions, polls, Q&A updating instantly across all screens |
 | AI Event Concierge | Gemini 2.0 Flash | Chat with an AI that knows the schedule, speakers, and venue |
-| Smart Check-in | Vision API | QR code scan with optional badge photo recognition |
+| Smart Check-in | Vision API + in-browser QR | Mobile camera QR scan, manual ID entry, or Vision OCR fallback |
+| Admin Console | Firestore real-time | Roster with per-attendee QR codes, live stats, manual check-in |
 | Photo Board | Cloud Storage + Vision API | Shared event photos with auto-generated labels |
 
 ## Architecture
@@ -64,9 +65,24 @@ uvicorn app.main:app --reload --port 8080
 ```bash
 cd frontend
 npm install
-cp .env.example .env.local      # fill in Firebase config
+cp .env.example .env.local      # fill in Firebase config; leave VITE_API_URL blank in dev
 npm run dev
 ```
+
+The Vite dev server proxies `/api/*` to `http://localhost:8080`, so the backend
+must be running before AI concierge, check-in, and photo board calls will
+succeed. If you change the backend port, update both `vite.config.ts` and the
+`VITE_API_URL` env var.
+
+### Demo walkthrough
+
+1. Sign in (Google or email + password).
+2. Open **Admin** → click **Re-seed demo** (seeds the event, 4 sessions, and
+   15 attendees with `name_lower` indexes for the OCR search path).
+3. On a phone, open **Check-in** → **Scan QR** → scan any attendee card from
+   the Admin page. The roster flips to "checked in" live.
+4. For a desktop-only demo: **Enter ID** (`att-0001`) or **Badge Photo** to
+   exercise the Vision OCR fallback.
 
 ## Deploy
 
@@ -107,9 +123,10 @@ Note: Ensure you have run `gcloud auth login` and `firebase login` before deploy
 │   └── pyproject.toml
 ├── frontend/                React SPA
 │   ├── src/
-│   │   ├── components/      UI and feature components
-│   │   ├── hooks/           Custom React hooks
-│   │   ├── lib/             Firebase SDK, API client
+│   │   ├── components/      UI and feature components (incl. QrScanner)
+│   │   ├── hooks/           Custom React hooks (+ seedDemoData)
+│   │   ├── lib/             Firebase SDK, API client, demo roster
+│   │   ├── pages/           EventPage, Admin
 │   │   └── types/           TypeScript interfaces
 │   └── package.json
 ├── firestore.rules          Security rules for direct client writes

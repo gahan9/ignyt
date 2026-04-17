@@ -1,3 +1,5 @@
+from typing import Any
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -5,7 +7,14 @@ class Settings(BaseSettings):
     gcp_project_id: str = "ignyt-dev"
     gemini_api_key: str = ""
 
-    cors_origins: list[str] = ["http://localhost:5173"]
+    cors_origins: Any = ["http://localhost:5173"]
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def assemble_cors_origins(cls, v: Any) -> list[str] | Any:
+        if isinstance(v, str) and not v.startswith("["):
+            return [i.strip() for i in v.split(";")]
+        return v
 
     daily_gemini_requests: int = 100
     max_tokens_per_request: int = 1024

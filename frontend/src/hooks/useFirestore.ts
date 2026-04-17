@@ -8,6 +8,8 @@ import {
   limit,
   addDoc,
   serverTimestamp,
+  setDoc,
+  doc,
   DocumentData,
 } from "firebase/firestore";
 
@@ -72,4 +74,48 @@ export async function addDocument(path: string, data: DocumentData): Promise<str
     timestamp: serverTimestamp(),
   });
   return docRef.id;
+}
+
+/**
+ * Seed demo data into Firestore.
+ */
+export async function seedDemoData() {
+  const eventId = "demo-event";
+  
+  // Create Event
+  await setDoc(doc(db, "events", eventId), {
+    name: "Ignyt Launch Event 2026",
+    description: "AI-powered future of events",
+    location: "Innovation Hub",
+    date: "2026-04-17"
+  });
+
+  const sessions = [
+    {
+      id: "session-1",
+      title: "Opening Keynote",
+      speaker: "Jane Doe",
+      time: "09:00",
+      room: "Main Hall"
+    },
+    {
+      id: "session-2",
+      title: "The Future of AI in Events",
+      speaker: "John Smith",
+      time: "10:30",
+      room: "Hall A"
+    },
+    {
+      id: "session-3",
+      title: "Interactive Physical Experiences",
+      speaker: "Alice Green",
+      time: "13:00",
+      room: "Creative Lab"
+    }
+  ];
+
+  for (const s of sessions) {
+    const { id, ...data } = s;
+    await setDoc(doc(db, `events/${eventId}/sessions`, id), data);
+  }
 }

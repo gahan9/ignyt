@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
 
 import { db } from "@/lib/firebase";
+import { seedDemoData } from "@/hooks/useFirestore";
 import EngagementWall from "@/components/features/EngagementWall";
 import type { Session } from "@/types";
 
@@ -43,23 +44,22 @@ export default function EventPage() {
 
   if (sessions.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
+      <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center" id="empty-state">
         <h2 className="text-lg font-semibold text-gray-700">No sessions yet</h2>
         <p className="mt-2 text-sm text-gray-500">
-          Seed the Firestore collection{" "}
-          <code className="rounded bg-gray-200 px-1.5 py-0.5 text-xs">
-            events/{DEMO_EVENT_ID}/sessions
-          </code>{" "}
-          with session documents to get started.
+          The database is empty. Click below to populate it with demo data.
         </p>
-        <pre className="mx-auto mt-4 max-w-sm rounded-lg bg-gray-800 p-4 text-left text-xs text-green-400">
-{`{
-  "title": "Opening Keynote",
-  "speaker": "Jane Doe",
-  "time": "09:00",
-  "room": "Main Hall"
-}`}
-        </pre>
+        <button
+          id="seed-button"
+          onClick={async () => {
+            setLoading(true);
+            await seedDemoData();
+            window.location.reload();
+          }}
+          className="mt-6 rounded-lg bg-brand-600 px-6 py-2 text-sm font-medium text-white shadow hover:bg-brand-700 transition-colors"
+        >
+          Seed Demo Data
+        </button>
       </div>
     );
   }

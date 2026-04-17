@@ -70,10 +70,19 @@ npm run dev
 
 ## Deploy
 
+### Linux/macOS
 ```bash
-export EP_GCP_PROJECT_ID=your-project-id
+export EP_GCP_PROJECT_ID=ignyt
 bash deploy.sh
 ```
+
+### Windows (PowerShell)
+```powershell
+$env:EP_GCP_PROJECT_ID="ignyt"
+.\deploy.ps1
+```
+
+Note: Ensure you have run `gcloud auth login` and `firebase login` before deploying.
 
 ## Budget Controls ($3 Cap)
 

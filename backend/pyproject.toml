@@ -1,0 +1,44 @@
+[project]
+name = "eventpulse-api"
+version = "0.1.0"
+description = "EventPulse – AI-powered physical event experience API"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "pydantic",
+    "pydantic-settings",
+    "firebase-admin",
+    "google-cloud-firestore",
+    "google-cloud-storage",
+    "google-cloud-vision",
+    "google-generativeai",
+    "python-multipart",
+    "structlog",
+    "qrcode[pil]",
+    "httpx",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "ruff",
+]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

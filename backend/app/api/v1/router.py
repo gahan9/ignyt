@@ -1,9 +1,11 @@
 from fastapi import APIRouter
 
+from app.api.v1.concierge import router as concierge_router
 from app.core.budget import cost_guard
 from app.models.common import BudgetStatus
 
 router = APIRouter(prefix="/api/v1")
+router.include_router(concierge_router)
 
 
 @router.get("/budget", response_model=BudgetStatus)

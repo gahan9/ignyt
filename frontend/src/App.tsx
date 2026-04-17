@@ -1,6 +1,7 @@
 import { NavLink, Route, Routes } from "react-router-dom";
 
 import { useAuth } from "@/hooks/useAuth";
+import ConciergeChat from "@/components/features/ConciergeChat";
 import EventPage from "@/pages/EventPage";
 
 function AuthGate({ children }: { children: React.ReactNode }) {
@@ -85,7 +86,7 @@ function AppShell() {
       <main className="mx-auto max-w-5xl p-6">
         <Routes>
           <Route path="/" element={<EventPage />} />
-          <Route path="/concierge" element={<Placeholder name="AI Concierge" />} />
+          <Route path="/concierge" element={<ConciergeChat />} />
           <Route path="/checkin" element={<Placeholder name="Check-in" />} />
         </Routes>
       </main>

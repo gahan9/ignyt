@@ -3,6 +3,7 @@ import { NavLink, Route, Routes } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import CheckIn from "@/components/features/CheckIn";
 import ConciergeChat from "@/components/features/ConciergeChat";
+import PhotoBoard from "@/components/features/PhotoBoard";
 import EventPage from "@/pages/EventPage";
 
 function AuthGate({ children }: { children: React.ReactNode }) {
@@ -43,6 +44,7 @@ const NAV_LINKS = [
   { to: "/", label: "Engage" },
   { to: "/concierge", label: "Concierge" },
   { to: "/checkin", label: "Check-in" },
+  { to: "/photos", label: "Photos" },
 ];
 
 function AppShell() {
@@ -89,6 +91,7 @@ function AppShell() {
           <Route path="/" element={<EventPage />} />
           <Route path="/concierge" element={<ConciergeChat />} />
           <Route path="/checkin" element={<CheckIn />} />
+          <Route path="/photos" element={<PhotoBoard />} />
         </Routes>
       </main>
     </div>

@@ -98,14 +98,6 @@ function AppShell() {
   );
 }
 
-function Placeholder({ name }: { name: string }) {
-  return (
-    <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-12 text-center">
-      <p className="text-gray-500">{name} — coming in a future commit.</p>
-    </div>
-  );
-}
-
 export default function App() {
   return (
     <AuthGate>

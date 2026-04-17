@@ -1,6 +1,7 @@
 import { NavLink, Route, Routes } from "react-router-dom";
 
 import { useAuth } from "@/hooks/useAuth";
+import CheckIn from "@/components/features/CheckIn";
 import ConciergeChat from "@/components/features/ConciergeChat";
 import EventPage from "@/pages/EventPage";
 
@@ -87,7 +88,7 @@ function AppShell() {
         <Routes>
           <Route path="/" element={<EventPage />} />
           <Route path="/concierge" element={<ConciergeChat />} />
-          <Route path="/checkin" element={<Placeholder name="Check-in" />} />
+          <Route path="/checkin" element={<CheckIn />} />
         </Routes>
       </main>
     </div>

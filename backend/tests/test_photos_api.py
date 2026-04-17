@@ -1,15 +1,16 @@
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 from fastapi.testclient import TestClient
 
 from app.core.budget import cost_guard
+from app.services.vision import VisionAPIError
 
 
 class TestGetUploadUrl:
     def test_success(self, authed_client: TestClient) -> None:
         with patch(
             "app.api.v1.photos.generate_signed_upload_url",
-            return_value=("https://signed-url", "gs://bucket/path"),
+            new=AsyncMock(return_value=("https://signed-url", "gs://bucket/path")),
         ):
             resp = authed_client.post(
                 "/api/v1/photos/upload-url",
@@ -35,22 +36,15 @@ class TestGetUploadUrl:
 
 class TestLabelPhoto:
     def test_success(self, authed_client: TestClient, mock_db: AsyncMock) -> None:
-        mock_label = MagicMock()
-        mock_label.description = "sunset"
-
-        mock_response = MagicMock()
-        mock_response.error.message = ""
-        mock_response.label_annotations = [mock_label]
-
-        mock_vision_client = MagicMock()
-        mock_vision_client.label_detection.return_value = mock_response
-
         mock_doc_ref = AsyncMock()
         mock_doc_ref.id = "photo-001"
         mock_db.collection.return_value.document.return_value \
             .collection.return_value.document.return_value = mock_doc_ref
 
-        with patch("app.api.v1.photos.vision.ImageAnnotatorClient", return_value=mock_vision_client):
+        with patch(
+            "app.api.v1.photos.detect_labels_gcs",
+            new=AsyncMock(return_value=["sunset"]),
+        ):
             resp = authed_client.post(
                 "/api/v1/photos/label",
                 json={"event_id": "demo-event", "gcs_uri": "gs://bucket/img.jpg"},
@@ -72,14 +66,10 @@ class TestLabelPhoto:
         assert resp.status_code == 429
 
     def test_vision_api_error(self, authed_client: TestClient, mock_db: AsyncMock) -> None:
-        mock_response = MagicMock()
-        mock_response.error.message = "INTERNAL_ERROR"
-        mock_response.label_annotations = []
-
-        mock_vision_client = MagicMock()
-        mock_vision_client.label_detection.return_value = mock_response
-
-        with patch("app.api.v1.photos.vision.ImageAnnotatorClient", return_value=mock_vision_client):
+        with patch(
+            "app.api.v1.photos.detect_labels_gcs",
+            new=AsyncMock(side_effect=VisionAPIError("INTERNAL_ERROR")),
+        ):
             resp = authed_client.post(
                 "/api/v1/photos/label",
                 json={"event_id": "demo-event", "gcs_uri": "gs://bucket/img.jpg"},
@@ -87,18 +77,18 @@ class TestLabelPhoto:
 
         assert resp.status_code == 502
 
-    def test_vision_exception_returns_empty_labels(
+    def test_vision_transient_returns_empty_labels(
         self, authed_client: TestClient, mock_db: AsyncMock
     ) -> None:
-        mock_vision_client = MagicMock()
-        mock_vision_client.label_detection.side_effect = RuntimeError("network")
-
         mock_doc_ref = AsyncMock()
         mock_doc_ref.id = "photo-002"
         mock_db.collection.return_value.document.return_value \
             .collection.return_value.document.return_value = mock_doc_ref
 
-        with patch("app.api.v1.photos.vision.ImageAnnotatorClient", return_value=mock_vision_client):
+        with patch(
+            "app.api.v1.photos.detect_labels_gcs",
+            new=AsyncMock(return_value=[]),
+        ):
             resp = authed_client.post(
                 "/api/v1/photos/label",
                 json={"event_id": "demo-event", "gcs_uri": "gs://bucket/img.jpg"},
@@ -108,19 +98,15 @@ class TestLabelPhoto:
         assert resp.json()["labels"] == []
 
     def test_saves_to_firestore(self, authed_client: TestClient, mock_db: AsyncMock) -> None:
-        mock_response = MagicMock()
-        mock_response.error.message = ""
-        mock_response.label_annotations = []
-
-        mock_vision_client = MagicMock()
-        mock_vision_client.label_detection.return_value = mock_response
-
         mock_doc_ref = AsyncMock()
         mock_doc_ref.id = "photo-003"
         mock_db.collection.return_value.document.return_value \
             .collection.return_value.document.return_value = mock_doc_ref
 
-        with patch("app.api.v1.photos.vision.ImageAnnotatorClient", return_value=mock_vision_client):
+        with patch(
+            "app.api.v1.photos.detect_labels_gcs",
+            new=AsyncMock(return_value=["label-a"]),
+        ):
             authed_client.post(
                 "/api/v1/photos/label",
                 json={"event_id": "demo-event", "gcs_uri": "gs://bucket/img.jpg"},
@@ -130,3 +116,5 @@ class TestLabelPhoto:
         saved = mock_doc_ref.set.call_args[0][0]
         assert saved["gcsUri"] == "gs://bucket/img.jpg"
         assert saved["uploadedBy"] == "test-user-123"
+        assert saved["labels"] == ["label-a"]
+        assert isinstance(saved["timestamp"], int)

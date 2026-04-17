@@ -1,8 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 
 import { apiPost } from "@/lib/api";
-
-const DEMO_EVENT_ID = "demo-event";
+import { DEMO_EVENT_ID } from "@/lib/constants";
 
 interface CheckInResult {
   attendee_id: string;

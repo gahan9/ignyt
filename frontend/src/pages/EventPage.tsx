@@ -1,38 +1,49 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
 
 import { db } from "@/lib/firebase";
 import { seedDemoData } from "@/hooks/useFirestore";
 import EngagementWall from "@/components/features/EngagementWall";
+import { DEMO_EVENT_ID } from "@/lib/constants";
 import type { Session } from "@/types";
-
-const DEMO_EVENT_ID = "demo-event";
 
 export default function EventPage() {
   const [sessions, setSessions] = useState<(Session & { id: string })[]>([]);
   const [activeSession, setActiveSession] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [seeding, setSeeding] = useState(false);
+
+  const fetchSessions = useCallback(async () => {
+    try {
+      const snap = await getDocs(
+        collection(db, `events/${DEMO_EVENT_ID}/sessions`),
+      );
+      const items = snap.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as (Session & { id: string })[];
+      setSessions(items);
+      if (items.length > 0) setActiveSession((curr) => curr ?? items[0].id);
+    } catch {
+      setSessions([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    async function fetchSessions() {
-      try {
-        const snap = await getDocs(
-          collection(db, `events/${DEMO_EVENT_ID}/sessions`),
-        );
-        const items = snap.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as (Session & { id: string })[];
-        setSessions(items);
-        if (items.length > 0) setActiveSession(items[0].id);
-      } catch {
-        setSessions([]);
-      } finally {
-        setLoading(false);
-      }
+    void fetchSessions();
+  }, [fetchSessions]);
+
+  const handleSeed = useCallback(async () => {
+    setSeeding(true);
+    try {
+      await seedDemoData();
+      await fetchSessions();
+    } finally {
+      setSeeding(false);
     }
-    fetchSessions();
-  }, []);
+  }, [fetchSessions]);
 
   if (loading) {
     return (
@@ -51,14 +62,11 @@ export default function EventPage() {
         </p>
         <button
           id="seed-button"
-          onClick={async () => {
-            setLoading(true);
-            await seedDemoData();
-            window.location.reload();
-          }}
-          className="mt-6 rounded-lg bg-brand-600 px-6 py-2 text-sm font-medium text-white shadow hover:bg-brand-700 transition-colors"
+          onClick={handleSeed}
+          disabled={seeding}
+          className="mt-6 rounded-lg bg-brand-600 px-6 py-2 text-sm font-medium text-white shadow hover:bg-brand-700 transition-colors disabled:opacity-60"
         >
-          Seed Demo Data
+          {seeding ? "Seeding..." : "Seed Demo Data"}
         </button>
       </div>
     );

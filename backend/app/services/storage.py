@@ -1,4 +1,6 @@
+import asyncio
 import uuid
+from datetime import timedelta
 
 import structlog
 from google.cloud import storage
@@ -17,18 +19,12 @@ def _get_client() -> storage.Client:
     return _client
 
 
-def generate_signed_upload_url(
+def _blocking_signed_url(
     bucket_name: str,
     event_id: str,
     filename: str,
-    content_type: str = "image/jpeg",
+    content_type: str,
 ) -> tuple[str, str]:
-    """Generate a signed URL for direct browser-to-GCS upload.
-
-    Returns (signed_url, gcs_uri).
-    """
-    from datetime import timedelta
-
     client = _get_client()
     bucket = client.bucket(bucket_name)
 
@@ -43,5 +39,22 @@ def generate_signed_upload_url(
     )
 
     gcs_uri = f"gs://{bucket_name}/{unique_name}"
+    return url, gcs_uri
+
+
+async def generate_signed_upload_url(
+    bucket_name: str,
+    event_id: str,
+    filename: str,
+    content_type: str = "image/jpeg",
+) -> tuple[str, str]:
+    """Generate a V4 signed URL for direct browser-to-GCS upload.
+
+    Returns ``(signed_url, gcs_uri)``. The blocking SDK call is run in a
+    worker thread so the event loop is not stalled under concurrency.
+    """
+    url, gcs_uri = await asyncio.to_thread(
+        _blocking_signed_url, bucket_name, event_id, filename, content_type
+    )
     logger.info("signed_url_generated", gcs_uri=gcs_uri)
     return url, gcs_uri

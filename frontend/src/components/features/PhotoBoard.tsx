@@ -2,9 +2,8 @@ import { useCallback, useRef, useState } from "react";
 
 import { apiPost } from "@/lib/api";
 import { useCollection } from "@/hooks/useFirestore";
+import { DEMO_EVENT_ID } from "@/lib/constants";
 import type { Photo } from "@/types";
-
-const DEMO_EVENT_ID = "demo-event";
 
 export default function PhotoBoard() {
   const [uploading, setUploading] = useState(false);

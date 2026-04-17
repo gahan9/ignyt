@@ -28,12 +28,24 @@ export default function ConciergeChat() {
     setInput("");
     setStreaming(true);
 
-    const assistantMsg: ChatMessage = {
-      role: "assistant",
-      content: "",
-      timestamp: Date.now(),
+    const assistantTimestamp = Date.now();
+    setMessages([
+      ...updated,
+      { role: "assistant", content: "", timestamp: assistantTimestamp },
+    ]);
+
+    const appendToAssistant = (append: string) => {
+      setMessages((prev) => {
+        if (prev.length === 0) return prev;
+        const last = prev[prev.length - 1];
+        const nextLast: ChatMessage = {
+          role: last.role,
+          content: last.content + append,
+          timestamp: last.timestamp,
+        };
+        return [...prev.slice(0, -1), nextLast];
+      });
     };
-    setMessages([...updated, assistantMsg]);
 
     try {
       await apiStreamPost(
@@ -45,22 +57,12 @@ export default function ConciergeChat() {
           })),
         },
         (chunk) => {
-          assistantMsg.content += chunk;
-          setMessages((prev) => {
-            const next = [...prev];
-            next[next.length - 1] = { ...assistantMsg };
-            return next;
-          });
+          appendToAssistant(chunk);
           scrollToBottom();
         },
       );
     } catch {
-      assistantMsg.content += "\n\n[Connection error — please try again]";
-      setMessages((prev) => {
-        const next = [...prev];
-        next[next.length - 1] = { ...assistantMsg };
-        return next;
-      });
+      appendToAssistant("\n\n[Connection error — please try again]");
     } finally {
       setStreaming(false);
       scrollToBottom();

@@ -1,8 +1,26 @@
+from typing import Any, AsyncIterator
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from fastapi.testclient import TestClient
 
 from tests.conftest import make_mock_doc
+
+
+async def _async_iter(items: list[Any]) -> AsyncIterator[Any]:
+    for item in items:
+        yield item
+
+
+def _wire_attendee_query(mock_db: AsyncMock, stream_docs: list[Any]) -> None:
+    """Wire the Firestore where/where/limit/stream chain used by
+    ``find_attendee_by_name``."""
+    final_query = MagicMock()
+    final_query.stream.return_value = _async_iter(stream_docs)
+    final_query.where.return_value = final_query
+    final_query.limit.return_value = final_query
+
+    col = mock_db.collection.return_value.document.return_value.collection.return_value
+    col.where.return_value = final_query
 
 
 class TestScanCheckin:
@@ -62,20 +80,19 @@ class TestBadgeOcr:
     def test_match_found(self, authed_client: TestClient, mock_db: AsyncMock) -> None:
         attendee_doc = MagicMock()
         attendee_doc.id = "att-010"
-        attendee_doc.to_dict.return_value = {"name": "Alice Smith"}
+        attendee_doc.to_dict.return_value = {
+            "name": "Alice Smith",
+            "name_lower": "alice smith",
+        }
+        _wire_attendee_query(mock_db, [attendee_doc])
 
-        async def fake_stream():
-            yield attendee_doc
-
-        mock_db.collection.return_value.document.return_value \
-            .collection.return_value.stream.return_value = fake_stream()
         mock_db.collection.return_value.document.return_value \
             .collection.return_value.document.return_value \
             .update = AsyncMock()
 
         with patch(
             "app.api.v1.checkin.extract_badge_text",
-            return_value=["Alice Smith\nEngineer"],
+            new=AsyncMock(return_value=["Alice Smith\nEngineer"]),
         ):
             resp = authed_client.post(
                 "/api/v1/checkin/badge",
@@ -88,7 +105,10 @@ class TestBadgeOcr:
         assert body["confidence"] > 0
 
     def test_no_text_detected(self, authed_client: TestClient) -> None:
-        with patch("app.api.v1.checkin.extract_badge_text", return_value=[]):
+        with patch(
+            "app.api.v1.checkin.extract_badge_text",
+            new=AsyncMock(return_value=[]),
+        ):
             resp = authed_client.post(
                 "/api/v1/checkin/badge",
                 json={"event_id": "demo-event", "image_base64": "ZmFrZQ=="},
@@ -100,16 +120,11 @@ class TestBadgeOcr:
         assert body["matched_attendee"] is None
 
     def test_text_but_no_match(self, authed_client: TestClient, mock_db: AsyncMock) -> None:
-        async def empty_stream():
-            return
-            yield  # pragma: no cover
-
-        mock_db.collection.return_value.document.return_value \
-            .collection.return_value.stream.return_value = empty_stream()
+        _wire_attendee_query(mock_db, [])
 
         with patch(
             "app.api.v1.checkin.extract_badge_text",
-            return_value=["Unknown Person"],
+            new=AsyncMock(return_value=["Unknown Person"]),
         ):
             resp = authed_client.post(
                 "/api/v1/checkin/badge",

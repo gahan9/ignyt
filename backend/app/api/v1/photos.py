@@ -1,8 +1,8 @@
+import time
 from typing import Any
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException
-from google.cloud import vision
 from google.cloud.firestore_v1 import AsyncClient
 
 from app.core.budget import cost_guard
@@ -16,6 +16,7 @@ from app.models.photos import (
     SignedUrlResponse,
 )
 from app.services.storage import generate_signed_upload_url
+from app.services.vision import VisionAPIError, detect_labels_gcs
 
 logger = structlog.get_logger()
 
@@ -29,7 +30,7 @@ async def get_upload_url(
 ) -> SignedUrlResponse:
     """Generate a signed URL for direct upload to GCS."""
     bucket = f"{settings.gcp_project_id}.appspot.com"
-    url, gcs_uri = generate_signed_upload_url(
+    url, gcs_uri = await generate_signed_upload_url(
         bucket, body.event_id, body.filename, body.content_type,
     )
     return SignedUrlResponse(upload_url=url, gcs_uri=gcs_uri)
@@ -46,29 +47,18 @@ async def label_photo(
         raise HTTPException(status_code=429, detail="Vision API daily limit reached")
 
     try:
-        client = vision.ImageAnnotatorClient()
-        image = vision.Image(source=vision.ImageSource(gcs_image_uri=body.gcs_uri))
-        response = client.label_detection(image=image, max_results=8)
-        cost_guard.record_vision()
+        labels = await detect_labels_gcs(body.gcs_uri, max_results=8)
+    except VisionAPIError as exc:
+        raise HTTPException(status_code=502, detail="Vision API error") from exc
 
-        if response.error.message:
-            logger.error("vision_label_error", error=response.error.message)
-            raise HTTPException(status_code=502, detail="Vision API error")
-
-        labels = [label.description for label in response.label_annotations]
-
-    except HTTPException:
-        raise
-    except Exception as exc:
-        logger.error("vision_label_failed", error=str(exc))
-        labels = []
-
-    doc_ref = db.collection("events").document(body.event_id).collection("photos").document()
+    doc_ref = (
+        db.collection("events").document(body.event_id).collection("photos").document()
+    )
     await doc_ref.set({
         "gcsUri": body.gcs_uri,
         "labels": labels,
         "uploadedBy": user.get("uid", ""),
-        "timestamp": int(__import__("time").time() * 1000),
+        "timestamp": int(time.time() * 1000),
     })
 
     return LabelResponse(labels=labels, photo_id=doc_ref.id)

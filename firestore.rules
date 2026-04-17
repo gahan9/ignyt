@@ -5,8 +5,7 @@ service cloud.firestore {
 
     match /events/{eventId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null
-                   && request.auth.token.role == 'organizer';
+      allow write: if request.auth != null;
 
       match /attendees/{attendeeId} {
         allow read: if request.auth != null;

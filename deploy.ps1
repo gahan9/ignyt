@@ -41,7 +41,8 @@ gcloud run deploy ignyt-api `
   --cpu-throttling `
   --memory 512Mi `
   --allow-unauthenticated `
-  --set-env-vars "EP_GCP_PROJECT_ID=$FrontendProjectId,EP_CORS_ORIGINS=https://$FrontendProjectId.web.app;https://$FrontendProjectId.firebaseapp.com"
+  --set-env-vars "EP_GCP_PROJECT_ID=$FrontendProjectId,EP_CORS_ORIGINS=https://$FrontendProjectId.web.app;https://$FrontendProjectId.firebaseapp.com" `
+  --set-secrets "EP_GEMINI_API_KEY=ignyt-gemini-key:latest"
 if ($LASTEXITCODE -ne 0) { Write-Error "Cloud Run deployment failed"; exit 1 }
 
 $BackendUrl = gcloud run services describe ignyt-api `

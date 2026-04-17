@@ -10,10 +10,13 @@ import {
   serverTimestamp,
   setDoc,
   doc,
+  writeBatch,
   DocumentData,
 } from "firebase/firestore";
 
 import { db } from "@/lib/firebase";
+import { DEMO_EVENT_ID } from "@/lib/constants";
+import { DEMO_ATTENDEES } from "@/lib/demoData";
 
 /**
  * Subscribe to a Firestore collection in real time.
@@ -78,44 +81,70 @@ export async function addDocument(path: string, data: DocumentData): Promise<str
 
 /**
  * Seed demo data into Firestore.
+ *
+ * Writes are idempotent (`setDoc` with fixed ids) so re-seeding is safe.
+ * Attendees are seeded in a single batched write to minimize round-trips;
+ * the event doc and sessions are small enough that we keep them sequential
+ * for readability.
  */
-export async function seedDemoData() {
-  const eventId = "demo-event";
-  
-  // Create Event
+export async function seedDemoData(): Promise<{ attendees: number }> {
+  const eventId = DEMO_EVENT_ID;
+
   await setDoc(doc(db, "events", eventId), {
     name: "Ignyt Launch Event 2026",
     description: "AI-powered future of events",
-    location: "Innovation Hub",
-    date: "2026-04-17"
+    location: "Innovation Hub, Main Campus",
+    date: "2026-04-17",
   });
 
   const sessions = [
     {
       id: "session-1",
       title: "Opening Keynote",
-      speaker: "Jane Doe",
+      speaker: "Dr. Sarah Chen",
       time: "09:00",
-      room: "Main Hall"
+      room: "Main Hall",
     },
     {
       id: "session-2",
-      title: "The Future of AI in Events",
-      speaker: "John Smith",
+      title: "Building on GCP",
+      speaker: "Marcus Johnson",
       time: "10:30",
-      room: "Hall A"
+      room: "Room A",
     },
     {
       id: "session-3",
-      title: "Interactive Physical Experiences",
-      speaker: "Alice Green",
+      title: "Hands-on Workshop: Gemini API",
+      speaker: "Priya Patel",
       time: "13:00",
-      room: "Creative Lab"
-    }
+      room: "Room B",
+    },
+    {
+      id: "session-4",
+      title: "Demo Showcase",
+      speaker: "All Teams",
+      time: "15:00",
+      room: "Main Hall",
+    },
   ];
 
   for (const s of sessions) {
     const { id, ...data } = s;
     await setDoc(doc(db, `events/${eventId}/sessions`, id), data);
   }
+
+  // Batch attendee writes -- a single commit keeps seeding fast and atomic.
+  const batch = writeBatch(db);
+  for (const a of DEMO_ATTENDEES) {
+    batch.set(doc(db, `events/${eventId}/attendees`, a.id), {
+      name: a.name,
+      name_lower: a.name_lower,
+      email: a.email,
+      interests: a.interests,
+      checkedIn: a.checkedIn,
+    });
+  }
+  await batch.commit();
+
+  return { attendees: DEMO_ATTENDEES.length };
 }

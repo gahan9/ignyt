@@ -12,6 +12,7 @@ export default function EventPage() {
   const [activeSession, setActiveSession] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [seeding, setSeeding] = useState(false);
+  const [seedError, setSeedError] = useState<string | null>(null);
 
   const fetchSessions = useCallback(async () => {
     try {
@@ -37,9 +38,13 @@ export default function EventPage() {
 
   const handleSeed = useCallback(async () => {
     setSeeding(true);
+    setSeedError(null);
     try {
       await seedDemoData();
       await fetchSessions();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Seeding failed";
+      setSeedError(msg);
     } finally {
       setSeeding(false);
     }
@@ -68,6 +73,11 @@ export default function EventPage() {
         >
           {seeding ? "Seeding..." : "Seed Demo Data"}
         </button>
+        {seedError && (
+          <p className="mx-auto mt-4 max-w-md break-words rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
+            {seedError}
+          </p>
+        )}
       </div>
     );
   }

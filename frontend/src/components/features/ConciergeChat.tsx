@@ -61,8 +61,9 @@ export default function ConciergeChat() {
           scrollToBottom();
         },
       );
-    } catch {
-      appendToAssistant("\n\n[Connection error — please try again]");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "unknown error";
+      appendToAssistant(`\n\n[${msg}]`);
     } finally {
       setStreaming(false);
       scrollToBottom();

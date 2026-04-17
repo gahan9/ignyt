@@ -16,6 +16,7 @@ import {
   MailIcon,
   MenuIcon,
   ScanLineIcon,
+  ShieldIcon,
   UserIcon,
   XIcon,
   ZapIcon,
@@ -24,6 +25,7 @@ import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import CheckIn from "@/components/features/CheckIn";
 import ConciergeChat from "@/components/features/ConciergeChat";
 import PhotoBoard from "@/components/features/PhotoBoard";
+import AdminPage from "@/pages/Admin";
 import EventPage from "@/pages/EventPage";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -373,6 +375,7 @@ const NAV_LINKS = [
   { to: "/concierge", label: "Concierge", icon: BotIcon },
   { to: "/checkin", label: "Check-in", icon: ScanLineIcon },
   { to: "/photos", label: "Photos", icon: CameraIcon },
+  { to: "/admin", label: "Admin", icon: ShieldIcon },
 ] as const;
 
 function UserAvatar({ name, className }: { name: string; className?: string }) {
@@ -556,6 +559,7 @@ function AppShell() {
             <Route path="/concierge" element={<ConciergeChat />} />
             <Route path="/checkin" element={<CheckIn />} />
             <Route path="/photos" element={<PhotoBoard />} />
+            <Route path="/admin" element={<AdminPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </ErrorBoundary>

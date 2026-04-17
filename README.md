@@ -1,4 +1,4 @@
-# EventPulse
+# Ignyt
 
 > AI-powered physical event experience platform | Built on Google Cloud
 

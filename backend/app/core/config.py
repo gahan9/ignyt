@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    gcp_project_id: str = "eventpulse-dev"
+    gcp_project_id: str = "ignyt-dev"
     gemini_api_key: str = ""
 
     cors_origins: list[str] = ["http://localhost:5173"]

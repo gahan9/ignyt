@@ -11,7 +11,7 @@ logger = structlog.get_logger()
 
 _model: Any = None
 
-EVENT_SYSTEM_PROMPT = """You are EventPulse AI, a helpful concierge for a live physical event.
+EVENT_SYSTEM_PROMPT = """You are Ignyt AI, a helpful concierge for a live physical event.
 
 You know the event schedule, venue layout, and speaker bios provided below.
 Answer attendee questions about sessions, timing, directions, networking, and
@@ -25,7 +25,7 @@ or speaker names.
 --- END CONTEXT ---
 """
 
-DEFAULT_EVENT_CONTEXT = """Event: EventPulse Demo Day
+DEFAULT_EVENT_CONTEXT = """Event: Ignyt Demo Day
 Date: Today
 Venue: Innovation Hub, Main Campus
 
@@ -37,7 +37,7 @@ Sessions:
 - 16:30 Closing & Awards — Main Hall
 
 Facilities:
-- Wi-Fi: network "EventPulse", password on your badge
+- Wi-Fi: network "Ignyt", password on your badge
 - Lunch: 12:00–13:00 in the Atrium
 - Restrooms: ground floor near elevators
 - Help Desk: lobby entrance

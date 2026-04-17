@@ -13,13 +13,13 @@ logger = structlog.get_logger()
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
-    logger.info("eventpulse_api_starting", project=settings.gcp_project_id)
+    logger.info("ignyt_api_starting", project=settings.gcp_project_id)
     yield
-    logger.info("eventpulse_api_shutdown")
+    logger.info("ignyt_api_shutdown")
 
 
 app = FastAPI(
-    title="EventPulse API",
+    title="Ignyt API",
     description="AI-powered physical event experience",
     version="0.1.0",
     lifespan=lifespan,
@@ -38,4 +38,4 @@ app.include_router(v1_router)
 
 @app.get("/health")
 async def health_check() -> dict[str, str]:
-    return {"status": "healthy", "service": "eventpulse-api"}
+    return {"status": "healthy", "service": "ignyt-api"}

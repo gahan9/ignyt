@@ -1,7 +1,7 @@
 [project]
-name = "eventpulse-api"
+name = "ignyt-api"
 version = "0.1.0"
-description = "EventPulse – AI-powered physical event experience API"
+description = "Ignyt – AI-powered physical event experience API"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi",

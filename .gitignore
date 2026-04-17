@@ -1,3 +1,9 @@
+# Cursor
+.cursor/
+
+# Claude
+.claude/
+
 # Python
 __pycache__/
 *.py[cod]

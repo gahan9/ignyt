@@ -1,4 +1,3 @@
-from collections.abc import AsyncIterator
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
@@ -9,19 +8,7 @@ from app.repositories.attendee_repo import (
     get_attendee,
     mark_checked_in,
 )
-
-
-def _mock_doc(data: dict[str, Any] | None, doc_id: str = "att-001") -> MagicMock:
-    doc = MagicMock()
-    doc.id = doc_id
-    doc.exists = data is not None
-    doc.to_dict.return_value = data
-    return doc
-
-
-async def _async_iter(items: list[Any]) -> AsyncIterator[Any]:
-    for item in items:
-        yield item
+from tests.conftest import async_iter_from_list, make_mock_doc
 
 
 def _build_attendees_query_mock(
@@ -33,7 +20,7 @@ def _build_attendees_query_mock(
     assert on ``where``/``limit`` invocations.
     """
     final_query = MagicMock()
-    final_query.stream.return_value = _async_iter(stream_docs)
+    final_query.stream.return_value = async_iter_from_list(stream_docs)
 
     def _where(*_args: Any, **_kwargs: Any) -> MagicMock:
         return final_query
@@ -52,7 +39,7 @@ def _build_attendees_query_mock(
 class TestGetAttendee:
     @pytest.mark.asyncio
     async def test_found(self) -> None:
-        doc = _mock_doc({"name": "Alice", "checkedIn": False}, doc_id="att-001")
+        doc = make_mock_doc({"name": "Alice", "checkedIn": False}, doc_id="att-001")
 
         db = AsyncMock()
         db.collection.return_value.document.return_value.collection.return_value.document.return_value.get = AsyncMock(
@@ -67,7 +54,7 @@ class TestGetAttendee:
 
     @pytest.mark.asyncio
     async def test_not_found(self) -> None:
-        doc = _mock_doc(None)
+        doc = make_mock_doc(None)
 
         db = AsyncMock()
         db.collection.return_value.document.return_value.collection.return_value.document.return_value.get = AsyncMock(
@@ -96,7 +83,7 @@ class TestMarkCheckedIn:
 class TestFindAttendeeByName:
     @pytest.mark.asyncio
     async def test_match_found(self) -> None:
-        doc = _mock_doc(
+        doc = make_mock_doc(
             {"name": "Bob Smith", "name_lower": "bob smith"},
             doc_id="att-002",
         )
@@ -124,7 +111,7 @@ class TestFindAttendeeByName:
     @pytest.mark.asyncio
     async def test_case_insensitive_query(self) -> None:
         """Input casing is normalized before the Firestore range query."""
-        doc = _mock_doc(
+        doc = make_mock_doc(
             {"name": "Alice Johnson", "name_lower": "alice johnson"},
             doc_id="att-004",
         )
@@ -138,7 +125,7 @@ class TestFindAttendeeByName:
     @pytest.mark.asyncio
     async def test_uses_prefix_range_query(self) -> None:
         """Both bounds of the range query are passed to Firestore."""
-        doc = _mock_doc(
+        doc = make_mock_doc(
             {"name": "Carol Davis", "name_lower": "carol davis"},
             doc_id="att-005",
         )

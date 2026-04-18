@@ -1,15 +1,13 @@
+from collections.abc import AsyncIterator
+from typing import Any
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
 
-async def _fake_stream(messages):
+async def _fake_stream(_messages: list[dict[str, Any]]) -> AsyncIterator[str]:
     yield "Hello "
     yield "world"
-
-
-async def _fake_budget_stream(messages):
-    yield "Daily limit reached."
 
 
 class TestConciergeChat:

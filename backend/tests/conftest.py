@@ -1,5 +1,8 @@
+"""Pytest fixtures and shared test helpers for the API test suite."""
+
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
@@ -10,6 +13,13 @@ from app.core.budget import CostGuard, cost_guard
 from app.core.dependencies import get_firestore
 from app.core.security import get_current_user, get_optional_user
 from app.main import app
+
+
+async def async_iter_from_list(items: list[Any]) -> AsyncIterator[Any]:
+    """Yield *items* for async Firestore ``stream()`` mocks."""
+    for item in items:
+        yield item
+
 
 FAKE_USER: dict[str, Any] = {
     "uid": "test-user-123",
@@ -49,7 +59,7 @@ def authed_client(mock_db: AsyncMock) -> TestClient:
     app.dependency_overrides[get_firestore] = lambda: mock_db
 
     with TestClient(app, raise_server_exceptions=False) as client:
-        yield client  # type: ignore[misc]
+        yield client
 
     app.dependency_overrides.clear()
 
@@ -59,7 +69,7 @@ def unauthed_client() -> TestClient:
     app.dependency_overrides.clear()
 
     with TestClient(app, raise_server_exceptions=False) as client:
-        yield client  # type: ignore[misc]
+        yield client
 
     app.dependency_overrides.clear()
 

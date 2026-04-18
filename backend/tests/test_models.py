@@ -14,7 +14,7 @@ class TestHealthResponse:
 
     def test_missing_field_raises(self) -> None:
         with pytest.raises(ValidationError):
-            HealthResponse(status="ok")  # type: ignore[call-arg]
+            HealthResponse.model_validate({"status": "ok"})
 
 
 class TestErrorResponse:
@@ -36,7 +36,7 @@ class TestCheckInRequest:
 
     def test_missing_attendee_id_raises(self) -> None:
         with pytest.raises(ValidationError):
-            CheckInRequest(event_id="demo-event")  # type: ignore[call-arg]
+            CheckInRequest.model_validate({"event_id": "demo-event"})
 
 
 class TestCheckInResponse:

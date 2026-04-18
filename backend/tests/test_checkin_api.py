@@ -1,22 +1,16 @@
-from collections.abc import AsyncIterator
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from fastapi.testclient import TestClient
 
-from tests.conftest import make_mock_doc
-
-
-async def _async_iter(items: list[Any]) -> AsyncIterator[Any]:
-    for item in items:
-        yield item
+from tests.conftest import async_iter_from_list, make_mock_doc
 
 
 def _wire_attendee_query(mock_db: AsyncMock, stream_docs: list[Any]) -> None:
     """Wire the Firestore where/where/limit/stream chain used by
     ``find_attendee_by_name``."""
     final_query = MagicMock()
-    final_query.stream.return_value = _async_iter(stream_docs)
+    final_query.stream.return_value = async_iter_from_list(stream_docs)
     final_query.where.return_value = final_query
     final_query.limit.return_value = final_query
 

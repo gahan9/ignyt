@@ -3,12 +3,12 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const getDocsMock = vi.fn();
-const collectionMock = vi.fn((db, path) => ({ __collectionPath: path }));
+const collectionMock = vi.fn((_db, path) => ({ __collectionPath: path }));
 const seedDemoDataMock = vi.fn();
 
 vi.mock("firebase/firestore", () => ({
-  getDocs: (...args: unknown[]) => getDocsMock(...args),
-  collection: (...args: unknown[]) => collectionMock(...args),
+  getDocs: (...args: any[]) => getDocsMock(...(args as any)),
+  collection: (...args: any[]) => collectionMock(...(args as any)),
 }));
 
 vi.mock("@/lib/firebase", () => ({
@@ -16,7 +16,7 @@ vi.mock("@/lib/firebase", () => ({
 }));
 
 vi.mock("@/hooks/useFirestore", () => ({
-  seedDemoData: (...args: unknown[]) => seedDemoDataMock(...args),
+  seedDemoData: (...args: any[]) => seedDemoDataMock(...(args as any)),
 }));
 
 // EngagementWall has its own Firestore subscriptions; stub it to keep this

@@ -8,18 +8,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const useCollectionMock = vi.fn();
 const seedDemoDataMock = vi.fn();
 const updateDocMock = vi.fn();
-const docMock = vi.fn((db, path, id) => ({ __docPath: `${path}/${id}` }));
+const docMock = vi.fn((_db, path, id) => ({ __docPath: `${path}/${id}` }));
 const serverTimestampMock = vi.fn(() => "__ts__");
 
 vi.mock("@/hooks/useFirestore", () => ({
-  useCollection: (...args: unknown[]) => useCollectionMock(...args),
-  seedDemoData: (...args: unknown[]) => seedDemoDataMock(...args),
+  useCollection: (...args: any[]) => useCollectionMock(...(args as any)),
+  seedDemoData: (...args: any[]) => seedDemoDataMock(...(args as any)),
 }));
 
 vi.mock("firebase/firestore", () => ({
-  doc: (...args: unknown[]) => docMock(...args),
+  doc: (...args: any[]) => docMock(...(args as any)),
   serverTimestamp: () => serverTimestampMock(),
-  updateDoc: (...args: unknown[]) => updateDocMock(...args),
+  updateDoc: (...args: any[]) => updateDocMock(...(args as any)),
 }));
 
 vi.mock("@/lib/firebase", () => ({
@@ -32,7 +32,7 @@ const qrToDataURLMock = vi.fn(() =>
 );
 vi.mock("qrcode", () => ({
   default: {
-    toDataURL: (...args: unknown[]) => qrToDataURLMock(...args),
+    toDataURL: (...args: any[]) => qrToDataURLMock(...(args as any)),
   },
 }));
 

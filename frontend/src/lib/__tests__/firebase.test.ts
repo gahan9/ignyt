@@ -15,47 +15,40 @@ const getFirestoreSpy = vi.fn();
 const getStorageSpy = vi.fn();
 
 vi.mock("firebase/app", () => ({
-  initializeApp: (...args: unknown[]) => {
-    initializeAppSpy(...args);
-    return { __app: "fake-app-instance" };
-  },
+  initializeApp: initializeAppSpy,
 }));
 vi.mock("firebase/auth", () => ({
-  getAuth: (...args: unknown[]) => {
-    getAuthSpy(...args);
-    return { __auth: "fake-auth" };
-  },
+  getAuth: getAuthSpy,
 }));
 vi.mock("firebase/firestore", () => ({
-  getFirestore: (...args: unknown[]) => {
-    getFirestoreSpy(...args);
-    return { __db: "fake-firestore" };
-  },
+  getFirestore: getFirestoreSpy,
 }));
 vi.mock("firebase/storage", () => ({
-  getStorage: (...args: unknown[]) => {
-    getStorageSpy(...args);
-    return { __storage: "fake-storage" };
-  },
+  getStorage: getStorageSpy,
 }));
 
 describe("firebase.ts", () => {
-  const originalEnv = { ...import.meta.env };
-
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
-    // Populate a full fake config.
-    import.meta.env.VITE_FIREBASE_API_KEY = "fake-key";
-    import.meta.env.VITE_FIREBASE_AUTH_DOMAIN = "fake.firebaseapp.com";
-    import.meta.env.VITE_FIREBASE_PROJECT_ID = "fake-project";
-    import.meta.env.VITE_FIREBASE_STORAGE_BUCKET = "fake.appspot.com";
-    import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID = "123456";
-    import.meta.env.VITE_FIREBASE_APP_ID = "1:123:web:abc";
+
+    // Setup mocks to return consistent handles
+    initializeAppSpy.mockReturnValue({ __app: "fake-app-instance" });
+    getAuthSpy.mockReturnValue({ __auth: "fake-auth" });
+    getFirestoreSpy.mockReturnValue({ __db: "fake-firestore" });
+    getStorageSpy.mockReturnValue({ __storage: "fake-storage" });
+
+    // Stub environment variables correctly (bypass read-only constraint)
+    vi.stubEnv("VITE_FIREBASE_API_KEY", "fake-key");
+    vi.stubEnv("VITE_FIREBASE_AUTH_DOMAIN", "fake.firebaseapp.com");
+    vi.stubEnv("VITE_FIREBASE_PROJECT_ID", "fake-project");
+    vi.stubEnv("VITE_FIREBASE_STORAGE_BUCKET", "fake.appspot.com");
+    vi.stubEnv("VITE_FIREBASE_MESSAGING_SENDER_ID", "123456");
+    vi.stubEnv("VITE_FIREBASE_APP_ID", "1:123:web:abc");
   });
 
   afterEach(() => {
-    Object.assign(import.meta.env, originalEnv);
+    vi.unstubAllEnvs();
   });
 
   it("forwards every VITE_FIREBASE_* env var to initializeApp", async () => {

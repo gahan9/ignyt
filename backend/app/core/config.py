@@ -18,7 +18,10 @@ class Settings(BaseSettings):
     gcp_project_id: str = "ignyt-dev"
     gemini_api_key: str = ""
 
-    cors_origins: list[str] = ["http://localhost:5173"]
+    # Typed as Any to prevent pydantic-settings from eagerly trying (and
+    # failing) to parse semicolon-separated strings as JSON. The
+    # validator below handles the actual conversion to list[str].
+    cors_origins: Any = ["http://localhost:5173"]
 
     daily_gemini_requests: int = 100
     max_tokens_per_request: int = 1024
@@ -29,17 +32,20 @@ class Settings(BaseSettings):
 
     @field_validator("cors_origins", mode="before")
     @classmethod
-    def _assemble_cors_origins(cls, raw: Any) -> list[str] | Any:
-        """Accept either a JSON list or a ``;``-separated string from env.
-
-        Env vars are always strings; this lets operators write
-        ``EP_CORS_ORIGINS="https://a.example;https://b.example"`` without
-        quoting JSON. JSON-shaped strings (``"[...]"``) are passed through
-        for Pydantic's native parser to handle.
-        """
-        if isinstance(raw, str) and not raw.startswith("["):
+    def _assemble_cors_origins(cls, raw: Any) -> list[str]:
+        """Accept either a JSON list or a ``;``-separated string from env."""
+        if isinstance(raw, list):
+            return raw
+        if isinstance(raw, str):
+            if raw.startswith("["):
+                import json
+                try:
+                    return json.loads(raw)
+                except json.JSONDecodeError:
+                    pass
+            # Fallback for raw semicolon-separated strings from gcloud run deploy
             return [origin.strip() for origin in raw.split(";") if origin.strip()]
-        return raw
+        return [str(raw)] if raw else []
 
 
 settings = Settings()

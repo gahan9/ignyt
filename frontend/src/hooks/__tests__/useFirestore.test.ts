@@ -39,17 +39,16 @@ const mockWriteBatch = vi.fn(() => ({
 }));
 
 vi.mock("firebase/firestore", () => ({
-  collection: (...args: unknown[]) => mockCollection(...args),
-  doc: (...args: unknown[]) => mockDoc(...args),
-  query: (...args: unknown[]) => mockQuery(...(args as [unknown, ...unknown[]])),
-  orderBy: (...args: unknown[]) => mockOrderBy(...(args as [string, string?])),
-  limit: (...args: unknown[]) => mockLimit(...(args as [number])),
-  onSnapshot: (...args: unknown[]) =>
-    mockOnSnapshot(...(args as [unknown, SnapshotCb])),
-  setDoc: (...args: unknown[]) => mockSetDoc(...args),
-  addDoc: (...args: unknown[]) => mockAddDoc(...args),
-  serverTimestamp: () => mockServerTimestamp(),
-  writeBatch: (...args: unknown[]) => mockWriteBatch(...args),
+  collection: (...args: any[]) => mockCollection(...(args as any)),
+  doc: (...args: any[]) => mockDoc(...(args as any)),
+  query: (...args: any[]) => mockQuery(...(args as any)),
+  orderBy: (...args: any[]) => mockOrderBy(...(args as any)),
+  limit: (...args: any[]) => mockLimit(...(args as any)),
+  onSnapshot: (...args: any[]) => mockOnSnapshot(...(args as any)),
+  setDoc: (...args: any[]) => mockSetDoc(...(args as any)),
+  addDoc: (...args: any[]) => mockAddDoc(...(args as any)),
+  serverTimestamp: mockServerTimestamp,
+  writeBatch: (...args: any[]) => mockWriteBatch(...(args as any)),
 }));
 
 vi.mock("@/lib/firebase", () => ({

@@ -1,62 +1,52 @@
 rules_version = '2';
 
-// DEMO NOTE
-// ----------
-// This rule set is tuned for the single-tenant "demo-event" prototype. It lets
-// any signed-in user seed the demo, create attendees, and flip check-in flags
-// from the Admin page without first minting an "organizer" custom claim. For a
-// real multi-tenant production deployment, revert the event/attendees/sessions
-// writes to a role-gated variant (see the `organizer` block below, commented).
-
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    // Helper: Is the user logged in?
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Helper: Does the user have the organizer role?
+    function isOrganizer() {
+      return isSignedIn() && request.auth.token.role == 'organizer';
+    }
+
+    // Helper: Is this the user's own document?
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
 
     match /events/{eventId} {
-      allow read: if request.auth != null;
-      // allow write: if request.auth != null && request.auth.token.role == 'organizer';
-      allow create, update: if request.auth != null;
+      allow read: if isSignedIn();
+      allow write: if isOrganizer();
 
       match /attendees/{attendeeId} {
-        allow read: if request.auth != null;
-        allow create, update: if request.auth != null;
+        allow read: if isSignedIn();
+        allow write: if isOwner(attendeeId) || isOrganizer();
       }
 
       match /sessions/{sessionId} {
-        allow read: if request.auth != null;
-        allow create, update: if request.auth != null;
+        allow read: if isSignedIn();
+        allow write: if isOrganizer();
 
         match /reactions/{reactionId} {
-          allow read: if request.auth != null;
-          allow create: if request.auth != null
-                        && request.resource.data.keys()
-                           .hasOnly(['emoji', 'userId', 'timestamp'])
-                        && request.resource.data.emoji is string
-                        && request.resource.data.emoji.size() <= 4;
-        }
-
-        match /polls/{pollId} {
-          allow read: if request.auth != null;
-
-          match /votes/{voterId} {
-            allow read: if request.auth != null;
-            allow create, update: if request.auth != null
-                                  && request.auth.uid == voterId;
-          }
+          allow read: if isSignedIn();
+          allow create: if isSignedIn();
         }
 
         match /questions/{questionId} {
-          allow read: if request.auth != null;
-          allow create: if request.auth != null
-                        && request.resource.data.keys()
-                           .hasOnly(['text', 'userId', 'userName', 'upvotes', 'timestamp'])
-                        && request.resource.data.text is string
-                        && request.resource.data.text.size() <= 500;
+          allow read: if isSignedIn();
+          allow create: if isSignedIn();
+          allow update: if isOrganizer(); // For moderating questions
         }
       }
 
       match /photos/{photoId} {
-        allow read: if request.auth != null;
-        allow create: if request.auth != null;
+        allow read: if isSignedIn();
+        allow create: if isSignedIn();
+        allow delete: if isOrganizer();
       }
     }
   }

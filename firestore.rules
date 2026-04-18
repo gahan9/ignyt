@@ -2,34 +2,45 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Helper: Is the user logged in?
+
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Helper: Does the user have the organizer role?
+    // `role: 'organizer'` is a Firebase custom claim. It must be set server-side
+    // via the Admin SDK — see backend/scripts/grant_organizer.py. A fresh
+    // Google/email sign-in does NOT carry this claim by default.
     function isOrganizer() {
       return isSignedIn() && request.auth.token.role == 'organizer';
     }
 
-    // Helper: Is this the user's own document?
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    // Demo escape hatch: the single hard-coded demo event is writable by any
+    // signed-in user so `seedDemoData()` and the check-in flow work out of the
+    // box without a custom-claim round-trip. Real events stay locked down to
+    // organizers. The literal here must stay in sync with DEMO_EVENT_ID in
+    // frontend/src/lib/constants.ts.
+    function isDemoEvent(eventId) {
+      return eventId == 'demo-event';
+    }
+
     match /events/{eventId} {
       allow read: if isSignedIn();
-      allow write: if isOrganizer();
+      allow write: if isOrganizer() || (isSignedIn() && isDemoEvent(eventId));
 
       match /attendees/{attendeeId} {
         allow read: if isSignedIn();
-        allow write: if isOwner(attendeeId) || isOrganizer();
+        allow write: if isOwner(attendeeId)
+                     || isOrganizer()
+                     || (isSignedIn() && isDemoEvent(eventId));
       }
 
       match /sessions/{sessionId} {
         allow read: if isSignedIn();
-        allow write: if isOrganizer();
+        allow write: if isOrganizer() || (isSignedIn() && isDemoEvent(eventId));
 
         match /reactions/{reactionId} {
           allow read: if isSignedIn();
@@ -39,7 +50,7 @@ service cloud.firestore {
         match /questions/{questionId} {
           allow read: if isSignedIn();
           allow create: if isSignedIn();
-          allow update: if isOrganizer(); // For moderating questions
+          allow update: if isOrganizer();
         }
       }
 

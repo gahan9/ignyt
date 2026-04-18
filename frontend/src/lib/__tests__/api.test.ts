@@ -4,14 +4,19 @@ vi.mock("../firebase", () => ({
   auth: { currentUser: null },
 }));
 
-import { apiGet, apiPost, apiStreamPost } from "../api";
+import { ApiError, apiGet, apiPost, apiStreamPost } from "../api";
 
-function mockFetch(body: unknown, status = 200) {
+function mockFetch(body: unknown, status = 200, statusText?: string) {
+  // toApiError reads the body as text first, so we need text() to resolve to
+  // the stringified body; json() is only used on the happy path.
+  const resolvedStatusText =
+    statusText ?? (status === 200 ? "OK" : status >= 500 ? "Internal Server Error" : "Error");
   return vi.fn().mockResolvedValue({
     ok: status >= 200 && status < 300,
     status,
-    statusText: status === 200 ? "OK" : "Error",
+    statusText: resolvedStatusText,
     json: () => Promise.resolve(body),
+    text: () => Promise.resolve(body == null ? "" : JSON.stringify(body)),
     body: null,
   });
 }
@@ -39,10 +44,29 @@ describe("apiGet", () => {
     expect(url).toContain("/v1/budget");
   });
 
-  it("throws on non-ok response", async () => {
+  it("throws ApiError with status and statusText on non-ok response", async () => {
     globalThis.fetch = mockFetch(null, 500);
 
-    await expect(apiGet("/fail")).rejects.toThrow("API 500");
+    await expect(apiGet("/fail")).rejects.toThrow("500 Internal Server Error");
+  });
+
+  it("throws ApiError exposing numeric status", async () => {
+    globalThis.fetch = mockFetch(null, 404, "Not Found");
+
+    try {
+      await apiGet("/fail");
+      expect.fail("expected apiGet to throw");
+    } catch (err) {
+      expect(err).toBeInstanceOf(ApiError);
+      expect((err as ApiError).status).toBe(404);
+      expect((err as ApiError).statusText).toBe("Not Found");
+    }
+  });
+
+  it("surfaces server detail from JSON body in error message", async () => {
+    globalThis.fetch = mockFetch({ detail: "bad token" }, 401, "Unauthorized");
+
+    await expect(apiGet("/fail")).rejects.toThrow("401 Unauthorized: bad token");
   });
 
   it("includes Content-Type header", async () => {
@@ -68,10 +92,30 @@ describe("apiPost", () => {
     expect(JSON.parse(fetchCall[1].body)).toEqual({ name: "test" });
   });
 
-  it("throws on non-ok response", async () => {
-    globalThis.fetch = mockFetch(null, 422);
+  it("throws on non-ok response with rich error message", async () => {
+    globalThis.fetch = mockFetch({ detail: "validation failed" }, 422, "Unprocessable Entity");
 
-    await expect(apiPost("/fail", {})).rejects.toThrow("API 422");
+    await expect(apiPost("/fail", {})).rejects.toThrow(
+      "422 Unprocessable Entity: validation failed",
+    );
+  });
+
+  it("sends Bearer token when firebase user is signed in", async () => {
+    const { auth } = await import("../firebase");
+    (auth as unknown as { currentUser: unknown }).currentUser = {
+      getIdToken: vi.fn().mockResolvedValue("fake-token"),
+    };
+
+    globalThis.fetch = mockFetch({ ok: true });
+    await apiPost("/secured", {});
+
+    const headers = (fetch as ReturnType<typeof vi.fn>).mock.calls[0][1]?.headers as Record<
+      string,
+      string
+    >;
+    expect(headers.Authorization).toBe("Bearer fake-token");
+
+    (auth as unknown as { currentUser: unknown }).currentUser = null;
   });
 });
 
@@ -101,14 +145,15 @@ describe("apiStreamPost", () => {
     expect(received).toEqual(["Hello ", "world"]);
   });
 
-  it("throws when response is not ok", async () => {
+  it("throws ApiError when response is not ok", async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 500,
       statusText: "Internal Server Error",
+      text: () => Promise.resolve(""),
     });
 
-    await expect(apiStreamPost("/fail", {}, vi.fn())).rejects.toThrow("API 500");
+    await expect(apiStreamPost("/fail", {}, vi.fn())).rejects.toThrow("500 Internal Server Error");
   });
 
   it("throws when body is null", async () => {

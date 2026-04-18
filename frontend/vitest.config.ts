@@ -15,9 +15,28 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.test.{ts,tsx}"],
+    // E2E tests live in tests/e2e and are run by Playwright, not Vitest.
+    exclude: ["node_modules/**", "tests/e2e/**", "dist/**"],
     coverage: {
       provider: "v8",
-      include: ["src/lib/**", "src/hooks/**", "src/types/**"],
+      reporter: ["text", "html", "json", "json-summary", "lcov"],
+      reportsDirectory: "./coverage",
+      include: [
+        "src/lib/**",
+        "src/hooks/**",
+        "src/types/**",
+        "src/components/**",
+        "src/pages/**",
+      ],
+      exclude: [
+        "src/**/*.test.{ts,tsx}",
+        "src/test/**",
+        "src/**/__tests__/**",
+        "src/**/index.ts",
+      ],
+      // Soft target. CI inspects coverage-summary.json and emits a warning
+      // under 60%; it does not fail the build. Raise to a hard threshold
+      // once we're consistently above target.
     },
   },
 });

@@ -12,7 +12,33 @@ router.include_router(concierge_router)
 router.include_router(photos_router)
 
 
-@router.get("/budget", response_model=BudgetStatus)
+@router.get(
+    "/budget",
+    response_model=BudgetStatus,
+    tags=["budget"],
+    summary="Get daily usage counters",
+    description=(
+        "Returns current daily usage vs limits for cost-controlled services "
+        "(Gemini, Vision). Counters reset at UTC midnight. When a counter "
+        "reaches its limit, the associated endpoint responds with "
+        "`429 Too Many Requests` until the next reset."
+    ),
+    responses={
+        200: {
+            "description": "Current daily usage snapshot.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "gemini_used": 42,
+                        "gemini_limit": 1000,
+                        "vision_used": 7,
+                        "vision_limit": 1000,
+                    }
+                }
+            },
+        }
+    },
+)
 async def get_budget_status() -> dict[str, int]:
     """Returns current daily usage vs limits for cost-controlled services."""
     return cost_guard.status

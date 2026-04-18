@@ -7,10 +7,12 @@ param (
     [string]$Region = "us-central1"
 )
 
-# Refresh PATH from registry
+# Refresh PATH from registry, then prepend common tool dirs that may be missing
+# on a freshly-spawned shell (Cloud SDK, Node, and the per-user npm global dir).
+# Using $env:APPDATA keeps this portable across workstations / logged-in users.
 $MachinePath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
 $UserPath = [System.Environment]::GetEnvironmentVariable("Path", "User")
-$env:PATH = "$MachinePath;$UserPath;C:\Program Files\nodejs;C:\Users\gahan\AppData\Roaming\npm"
+$env:PATH = "$MachinePath;$UserPath;C:\Program Files\nodejs;$env:APPDATA\npm"
 
 $GCloudPath = "C:\Google\Cloud SDK\google-cloud-sdk\bin"
 if (Test-Path $GCloudPath) {

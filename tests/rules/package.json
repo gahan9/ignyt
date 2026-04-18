@@ -1,0 +1,16 @@
+{
+  "name": "ignyt-firestore-rules-tests",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Firestore security-rules tests using the rules-unit-testing emulator.",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^4.0.1",
+    "firebase": "^11",
+    "vitest": "^2"
+  }
+}

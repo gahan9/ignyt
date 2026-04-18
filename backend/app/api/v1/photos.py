@@ -9,6 +9,7 @@ from app.core.budget import cost_guard
 from app.core.config import settings
 from app.core.dependencies import get_firestore
 from app.core.security import get_current_user
+from app.models.common import ErrorResponse
 from app.models.photos import (
     LabelRequest,
     LabelResponse,
@@ -23,7 +24,34 @@ logger = structlog.get_logger()
 router = APIRouter(prefix="/photos", tags=["photos"])
 
 
-@router.post("/upload-url", response_model=SignedUrlResponse)
+@router.post(
+    "/upload-url",
+    response_model=SignedUrlResponse,
+    summary="Get a signed URL for direct GCS upload",
+    description=(
+        "Returns a V4 signed URL that the client uploads the photo to "
+        "directly (HTTP PUT) — no bytes flow through this API. The "
+        "returned `gcs_uri` is passed back to `/photos/label` once the "
+        "upload completes."
+    ),
+    responses={
+        200: {
+            "description": "Signed URL ready for upload.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "upload_url": (
+                            "https://storage.googleapis.com/ignyt-photos/"
+                            "events/demo-event/photos/<signed-params>"
+                        ),
+                        "gcs_uri": "gs://ignyt-photos/events/demo-event/photos/abc.jpg",
+                    }
+                }
+            },
+        },
+        401: {"model": ErrorResponse, "description": "Missing or invalid token."},
+    },
+)
 async def get_upload_url(
     body: SignedUrlRequest,
     _user: dict[str, Any] = Depends(get_current_user),
@@ -36,7 +64,43 @@ async def get_upload_url(
     return SignedUrlResponse(upload_url=url, gcs_uri=gcs_uri)
 
 
-@router.post("/label", response_model=LabelResponse)
+@router.post(
+    "/label",
+    response_model=LabelResponse,
+    summary="Run Vision label detection and persist to Firestore",
+    description=(
+        "Invokes Cloud Vision `LABEL_DETECTION` on a GCS object and stores "
+        "the top labels on a new Firestore `photos` document under the "
+        "event. Counts against the daily Vision CostGuard limit."
+    ),
+    responses={
+        200: {
+            "description": "Labels detected and photo doc created.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "labels": ["Conference", "People", "Stage", "Indoor"],
+                        "photo_id": "abc123XYZ",
+                    }
+                }
+            },
+        },
+        401: {"model": ErrorResponse, "description": "Missing or invalid token."},
+        429: {
+            "model": ErrorResponse,
+            "description": "Daily Vision budget exhausted; retry after UTC midnight.",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Vision API daily limit reached"}
+                }
+            },
+        },
+        502: {
+            "model": ErrorResponse,
+            "description": "Vision API upstream error.",
+        },
+    },
+)
 async def label_photo(
     body: LabelRequest,
     user: dict[str, Any] = Depends(get_current_user),

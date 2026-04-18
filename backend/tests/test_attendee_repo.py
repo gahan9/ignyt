@@ -1,4 +1,5 @@
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -54,9 +55,9 @@ class TestGetAttendee:
         doc = _mock_doc({"name": "Alice", "checkedIn": False}, doc_id="att-001")
 
         db = AsyncMock()
-        db.collection.return_value.document.return_value \
-            .collection.return_value.document.return_value \
-            .get = AsyncMock(return_value=doc)
+        db.collection.return_value.document.return_value.collection.return_value.document.return_value.get = AsyncMock(
+            return_value=doc
+        )
 
         result = await get_attendee(db, "demo-event", "att-001")
 
@@ -69,9 +70,9 @@ class TestGetAttendee:
         doc = _mock_doc(None)
 
         db = AsyncMock()
-        db.collection.return_value.document.return_value \
-            .collection.return_value.document.return_value \
-            .get = AsyncMock(return_value=doc)
+        db.collection.return_value.document.return_value.collection.return_value.document.return_value.get = AsyncMock(
+            return_value=doc
+        )
 
         result = await get_attendee(db, "demo-event", "nonexistent")
         assert result is None
@@ -82,9 +83,7 @@ class TestMarkCheckedIn:
     async def test_calls_update(self) -> None:
         db = AsyncMock()
         update_mock = AsyncMock()
-        db.collection.return_value.document.return_value \
-            .collection.return_value.document.return_value \
-            .update = update_mock
+        db.collection.return_value.document.return_value.collection.return_value.document.return_value.update = update_mock
 
         await mark_checked_in(db, "demo-event", "att-001")
 

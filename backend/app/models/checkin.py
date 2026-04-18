@@ -1,3 +1,5 @@
+"""Pydantic schemas for ``/api/v1/checkin/*`` endpoints."""
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -14,9 +16,7 @@ class CheckInRequest(BaseModel):
     )
 
     model_config = ConfigDict(
-        json_schema_extra={
-            "examples": [{"event_id": "demo-event", "attendee_id": "att-0001"}]
-        }
+        json_schema_extra={"examples": [{"event_id": "demo-event", "attendee_id": "att-0001"}]}
     )
 
 

@@ -1,3 +1,10 @@
+"""Ignyt FastAPI application entrypoint.
+
+Wires the v1 router, CORS middleware, OpenAPI metadata, and the
+``/health`` liveness endpoint. Imported by both the Cloud Run runtime
+(``uvicorn app.main:app``) and the OpenAPI export script.
+"""
+
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -64,6 +71,7 @@ OPENAPI_TAGS = [
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
+    """FastAPI lifespan hook — emits structured startup/shutdown events."""
     logger.info("ignyt_api_starting", project=settings.gcp_project_id)
     yield
     logger.info("ignyt_api_shutdown")
@@ -108,12 +116,11 @@ app.include_router(v1_router)
         200: {
             "description": "Service is up.",
             "content": {
-                "application/json": {
-                    "example": {"status": "healthy", "service": "ignyt-api"}
-                }
+                "application/json": {"example": {"status": "healthy", "service": "ignyt-api"}}
             },
         }
     },
 )
 async def health_check() -> HealthResponse:
+    """Return a static healthy response (Cloud Run liveness probe)."""
     return HealthResponse(status="healthy", service="ignyt-api")

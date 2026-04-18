@@ -96,9 +96,7 @@ class TestChatStream:
         chunk_without.text = ""
 
         mock_response = MagicMock()
-        mock_response.__iter__ = MagicMock(
-            return_value=iter([chunk_with_text, chunk_without])
-        )
+        mock_response.__iter__ = MagicMock(return_value=iter([chunk_with_text, chunk_without]))
 
         mock_chat = MagicMock()
         mock_chat.send_message.return_value = mock_response

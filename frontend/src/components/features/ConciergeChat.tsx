@@ -81,15 +81,25 @@ export default function ConciergeChat() {
   );
 
   return (
-    <div className="flex h-[calc(100vh-10rem)] flex-col">
+    <section
+      className="flex h-[calc(100vh-10rem)] flex-col"
+      aria-labelledby="concierge-heading"
+    >
       <div className="mb-4">
-        <h2 className="text-lg font-bold text-gray-800">AI Concierge</h2>
+        <h2 id="concierge-heading" className="text-lg font-bold text-gray-800">
+          AI Concierge
+        </h2>
         <p className="text-sm text-gray-500">
           Ask about sessions, speakers, venue, or anything about the event.
         </p>
       </div>
 
-      <div className="flex-1 overflow-y-auto rounded-xl border border-gray-200 bg-white p-4 space-y-3">
+      <div
+        className="flex-1 overflow-y-auto rounded-xl border border-gray-200 bg-white p-4 space-y-3"
+        role="region"
+        aria-label="Conversation"
+        aria-busy={streaming}
+      >
         {messages.length === 0 && (
           <div className="flex h-full items-center justify-center">
             <div className="text-center">
@@ -101,6 +111,11 @@ export default function ConciergeChat() {
           </div>
         )}
 
+        {streaming && (
+          <span className="sr-only" aria-live="polite">
+            Assistant is generating a reply.
+          </span>
+        )}
         {messages.map((msg, i) => (
           <div
             key={i}
@@ -112,6 +127,7 @@ export default function ConciergeChat() {
                   ? "bg-brand-600 text-white"
                   : "bg-gray-100 text-gray-800"
               }`}
+              aria-label={msg.role === "user" ? "You" : "Assistant"}
             >
               <p className="whitespace-pre-wrap">{msg.content}</p>
               {msg.role === "assistant" && streaming && i === messages.length - 1 && (
@@ -124,23 +140,30 @@ export default function ConciergeChat() {
       </div>
 
       <div className="mt-3 flex gap-2">
+        <label htmlFor="concierge-input" className="sr-only">
+          Message for the event assistant
+        </label>
         <input
+          id="concierge-input"
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Ask about the event..."
           disabled={streaming}
+          autoComplete="off"
           className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 disabled:opacity-50"
         />
         <button
+          type="button"
           onClick={sendMessage}
           disabled={!input.trim() || streaming}
+          aria-busy={streaming}
           className="rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-40 transition-colors"
         >
           Send
         </button>
       </div>
-    </div>
+    </section>
   );
 }

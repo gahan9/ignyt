@@ -38,9 +38,7 @@ class TestGenerateSignedUploadUrl:
         mock_client.bucket.return_value = mock_bucket
 
         with patch("app.services.storage._get_client", return_value=mock_client):
-            _, gcs_uri = await generate_signed_upload_url(
-                "bucket", "evt", "img.png", "image/png"
-            )
+            _, gcs_uri = await generate_signed_upload_url("bucket", "evt", "img.png", "image/png")
 
         assert "events/evt/photos/" in gcs_uri
         assert gcs_uri.endswith("_img.png")

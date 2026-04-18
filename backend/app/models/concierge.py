@@ -1,3 +1,5 @@
+"""Pydantic schemas for ``/api/v1/concierge/*`` endpoints."""
+
 from pydantic import BaseModel, ConfigDict, Field
 
 

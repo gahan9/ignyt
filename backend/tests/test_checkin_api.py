@@ -1,4 +1,5 @@
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from fastapi.testclient import TestClient
@@ -26,12 +27,10 @@ def _wire_attendee_query(mock_db: AsyncMock, stream_docs: list[Any]) -> None:
 class TestScanCheckin:
     def test_success(self, authed_client: TestClient, mock_db: AsyncMock) -> None:
         doc = make_mock_doc({"name": "Alice", "checkedIn": False}, doc_id="att-001")
-        mock_db.collection.return_value.document.return_value \
-            .collection.return_value.document.return_value \
-            .get = AsyncMock(return_value=doc)
-        mock_db.collection.return_value.document.return_value \
-            .collection.return_value.document.return_value \
-            .update = AsyncMock()
+        mock_db.collection.return_value.document.return_value.collection.return_value.document.return_value.get = AsyncMock(
+            return_value=doc
+        )
+        mock_db.collection.return_value.document.return_value.collection.return_value.document.return_value.update = AsyncMock()
 
         resp = authed_client.post(
             "/api/v1/checkin/scan",
@@ -46,9 +45,9 @@ class TestScanCheckin:
 
     def test_already_checked_in(self, authed_client: TestClient, mock_db: AsyncMock) -> None:
         doc = make_mock_doc({"name": "Bob", "checkedIn": True}, doc_id="att-002")
-        mock_db.collection.return_value.document.return_value \
-            .collection.return_value.document.return_value \
-            .get = AsyncMock(return_value=doc)
+        mock_db.collection.return_value.document.return_value.collection.return_value.document.return_value.get = AsyncMock(
+            return_value=doc
+        )
 
         resp = authed_client.post(
             "/api/v1/checkin/scan",
@@ -60,9 +59,9 @@ class TestScanCheckin:
 
     def test_attendee_not_found(self, authed_client: TestClient, mock_db: AsyncMock) -> None:
         doc = make_mock_doc(None)
-        mock_db.collection.return_value.document.return_value \
-            .collection.return_value.document.return_value \
-            .get = AsyncMock(return_value=doc)
+        mock_db.collection.return_value.document.return_value.collection.return_value.document.return_value.get = AsyncMock(
+            return_value=doc
+        )
 
         resp = authed_client.post(
             "/api/v1/checkin/scan",
@@ -86,9 +85,7 @@ class TestBadgeOcr:
         }
         _wire_attendee_query(mock_db, [attendee_doc])
 
-        mock_db.collection.return_value.document.return_value \
-            .collection.return_value.document.return_value \
-            .update = AsyncMock()
+        mock_db.collection.return_value.document.return_value.collection.return_value.document.return_value.update = AsyncMock()
 
         with patch(
             "app.api.v1.checkin.extract_badge_text",

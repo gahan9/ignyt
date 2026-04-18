@@ -64,9 +64,7 @@ def unauthed_client() -> TestClient:
     app.dependency_overrides.clear()
 
 
-def make_mock_doc(
-    data: dict[str, Any] | None, doc_id: str = "test-doc-id"
-) -> MagicMock:
+def make_mock_doc(data: dict[str, Any] | None, doc_id: str = "test-doc-id") -> MagicMock:
     doc = MagicMock()
     doc.id = doc_id
     doc.exists = data is not None

@@ -1,3 +1,5 @@
+"""Cross-cutting Pydantic models (health, errors, budget snapshot)."""
+
 from pydantic import BaseModel, Field
 
 

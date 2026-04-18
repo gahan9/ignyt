@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from fastapi import HTTPException
@@ -46,9 +46,9 @@ class TestGetCurrentUser:
                 "app.core.security.firebase_auth.verify_id_token",
                 side_effect=Exception("bad token"),
             ),
+            pytest.raises(HTTPException) as exc_info,
         ):
-            with pytest.raises(HTTPException) as exc_info:
-                await get_current_user(authorization="Bearer bad-token")
+            await get_current_user(authorization="Bearer bad-token")
 
         assert exc_info.value.status_code == 401
         assert "Invalid or expired" in exc_info.value.detail

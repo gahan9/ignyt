@@ -1,5 +1,13 @@
+"""Gemini concierge service.
+
+Wraps the ``google.generativeai`` SDK to stream a chat response back to the
+API layer, enforcing per-day budget caps via :mod:`app.core.budget`. The
+system prompt and default event context live here as module constants so
+they can be diffed and reviewed independently of code.
+"""
+
 from collections.abc import AsyncGenerator
-from typing import Any
+from typing import Any, Final
 
 import google.generativeai as genai
 import structlog
@@ -9,6 +17,17 @@ from app.core.config import settings
 
 logger = structlog.get_logger()
 
+GEMINI_MODEL_NAME: Final[str] = "gemini-2.0-flash"
+GEMINI_TEMPERATURE: Final[float] = 0.7
+
+BUDGET_EXHAUSTED_MESSAGE: Final[str] = (
+    "I've reached my daily conversation limit to stay within budget. Please try again tomorrow!"
+)
+GENERIC_ERROR_MESSAGE: Final[str] = "Sorry, I encountered an error. Please try again."
+
+# `Any` is used here because ``genai.GenerativeModel`` does not export a
+# stable, importable type — the SDK builds it dynamically from proto
+# definitions. Re-evaluate when google-generativeai ships proper stubs.
 _model: Any = None
 
 EVENT_SYSTEM_PROMPT = """You are Ignyt AI, a helpful concierge for a live physical event.
@@ -45,17 +64,16 @@ Facilities:
 
 
 def _get_model() -> Any:
+    """Lazily configure the SDK and instantiate (memoised) the Gemini model."""
     global _model
     if _model is None:
         genai.configure(api_key=settings.gemini_api_key)
         _model = genai.GenerativeModel(
-            model_name="gemini-2.0-flash",
-            system_instruction=EVENT_SYSTEM_PROMPT.format(
-                event_context=DEFAULT_EVENT_CONTEXT
-            ),
+            model_name=GEMINI_MODEL_NAME,
+            system_instruction=EVENT_SYSTEM_PROMPT.format(event_context=DEFAULT_EVENT_CONTEXT),
             generation_config=genai.GenerationConfig(
                 max_output_tokens=settings.max_tokens_per_request,
-                temperature=0.7,
+                temperature=GEMINI_TEMPERATURE,
             ),
         )
     return _model
@@ -66,15 +84,25 @@ async def chat_stream(
 ) -> AsyncGenerator[str, None]:
     """Stream a Gemini response, yielding text chunks.
 
-    Checks CostGuard before calling. Raises ValueError if budget exhausted.
+    Args:
+        messages: Conversation history in oldest-first order. Each entry
+            has ``role`` (``"user"`` or ``"assistant"``) and ``content``.
+            The last entry is treated as the prompt; everything before it
+            becomes the chat history. Pydantic validation in the API
+            layer guarantees shape and length.
+
+    Yields:
+        Plain-text chunks of the model response. On budget exhaustion or
+        upstream error, yields a single user-facing fallback message
+        instead of raising — the streaming response always completes.
     """
     if not cost_guard.check_gemini():
-        yield "I've reached my daily conversation limit to stay within budget. Please try again tomorrow!"
+        yield BUDGET_EXHAUSTED_MESSAGE
         return
 
     model = _get_model()
 
-    history = []
+    history: list[dict[str, Any]] = []
     for msg in messages[:-1]:
         role = "user" if msg["role"] == "user" else "model"
         history.append({"role": role, "parts": [msg["content"]]})
@@ -89,6 +117,10 @@ async def chat_stream(
         for chunk in response:
             if chunk.text:
                 yield chunk.text
-    except Exception as exc:
-        logger.error("gemini_stream_error", error=str(exc))
-        yield "Sorry, I encountered an error. Please try again."
+    except Exception:
+        # Broad catch is intentional: a streaming response that raises
+        # mid-flight breaks the FastAPI ``StreamingResponse`` contract
+        # and the client sees a connection reset. Degrade to a polite
+        # fallback message instead. ``logger.exception`` captures stack.
+        logger.exception("gemini_stream_error")
+        yield GENERIC_ERROR_MESSAGE

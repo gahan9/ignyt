@@ -27,12 +27,14 @@ def build_schema() -> dict:
 
 
 def load_existing(path: Path) -> dict | None:
+    """Load a previously-exported schema from disk, or ``None`` if absent."""
     if not path.exists():
         return None
     return json.loads(path.read_text(encoding="utf-8"))
 
 
 def main() -> int:
+    """CLI entrypoint: write or drift-check the exported OpenAPI schema."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--out",

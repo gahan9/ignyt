@@ -5,6 +5,86 @@
 Transform physical events with real-time audience engagement, an AI concierge,
 and smart check-in — all within a **$3 GCP budget**.
 
+## Challenge submission (vertical, logic, and evaluation map)
+
+This project is framed for hackathon-style review: a **smart, dynamic
+assistant**, **context-aware behavior**, **meaningful Google Cloud
+integration**, **real-world usability**, and **maintainable code** with
+security, tests, and accessibility in mind.
+
+### Chosen vertical and personas
+
+**Vertical:** in-person **conference / demo-day** experiences (physical
+events).
+
+**Primary persona — attendee:** needs the schedule, venue logistics, and
+session detail without hunting PDFs; wants to react, ask questions, share
+photos, and check in quickly from a phone.
+
+**Secondary persona — organizer / door staff:** needs a live roster, QR
+codes, optional Vision-backed badge OCR when QR fails, and a safe demo path
+to seed data for judges.
+
+### Approach and logic
+
+1. **Dynamic assistant (Gemini 2.0 Flash):** the concierge streams
+   token-by-token replies over HTTP (`POST /v1/concierge/chat`). The model
+   receives a fixed **event context pack** plus the **conversation history**
+   so answers stay grounded in the seeded schedule and venue copy (see
+   `backend/app/services/gemini.py`). Prompt rules discourage inventing
+   times or speaker names when uncertain.
+
+2. **Logical branching by user context (check-in):** attendees choose a
+   mode — **QR scan** (in-browser camera + decode), **manual attendee ID**
+   (typed `att-0001`-style id), or **badge photo** (Vision API text
+   detection + fuzzy match against `name_lower` in Firestore). The backend
+   picks the code path from the request shape; Firestore remains the source
+   of truth for who is checked in.
+
+3. **Google services used with intent:** Firestore for real-time wall,
+   roster, and engagement; Firebase Auth for identity; Cloud Run + FastAPI
+   for verified API boundaries; Gemini for natural-language concierge;
+   Vision for OCR/labels; Cloud Storage for photo uploads; Secret Manager +
+   IAM for cross-project least privilege (see `docs/ARCHITECTURE.md`).
+
+4. **Efficiency and cost:** `CostGuard` caps Gemini and Vision calls per day
+   per instance so a public demo stays inside a small budget; Cloud Run is
+   scaled for low steady cost.
+
+### How the solution works (one paragraph)
+
+Signed-in users load a Vite React SPA from Firebase Hosting. The SPA holds
+Firebase Auth state, subscribes to Firestore for live reactions, Q&A, photos,
+and roster updates, and calls Cloud Run with a **Firebase ID token** for
+concierge streaming, check-in validation, signed upload URLs, and Vision
+work. Organizers (custom claim) or demo-event writers can seed and manage
+data; security rules enforce writes. Full sequence diagrams live in
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
+### Assumptions
+
+- Judges or operators have (or will create) a Firebase user and can run
+  `bootstrap.ps1` / `deploy.ps1` with the documented `gcloud` + Firebase
+  logins.
+- The **concierge event pack** in code is static for the demo; production
+  hardening would hydrate context from Firestore sessions (same schema the
+  engagement wall already uses).
+- Email/password and Google providers are enabled in the Firebase console
+  (called out in bootstrap follow-ups).
+- E2E smoke tests assume Chromium; mobile camera flows are exercised manually
+  or via device farms outside CI.
+
+### How reviewers can map rubric → evidence
+
+| Evaluation area | Where to look |
+|-----------------|---------------|
+| **Code quality** | Layered FastAPI (`api` → `services` → `repositories`), typed TS client in `frontend/src/lib/api.ts`, OpenAPI + `docs/API.md`, `CONTRIBUTING.md` |
+| **Security** | Firebase token verification on protected routes, `firestore.rules` + emulator tests in `tests/rules/`, secrets via env/Secret Manager (no keys in repo) |
+| **Efficiency** | `app/core/budget.py`, Cloud Run settings in deploy scripts, bounded Pydantic payloads on concierge |
+| **Testing** | `backend/tests/`, `frontend` Vitest + RTL, Playwright in `frontend/tests/e2e/`, rules tests — summary in [Testing](#testing) and `docs/TESTING.md` |
+| **Accessibility** | Sign-in and navigation patterns in `App.tsx`, tabbed check-in in `CheckIn.tsx`, scanner dialog semantics in `QrScanner.tsx`, concierge region labeling in `ConciergeChat.tsx` |
+| **Google services** | Feature table below + `docs/ARCHITECTURE.md` component inventory |
+
 ## Features
 
 | Feature | Google Cloud Service | Description |

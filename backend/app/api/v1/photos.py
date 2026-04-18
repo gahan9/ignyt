@@ -1,5 +1,7 @@
-import time
-from typing import Any
+"""Photo board endpoints: signed upload URLs and Vision label detection."""
+
+from datetime import UTC, datetime
+from typing import Any, Final
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException
@@ -20,6 +22,9 @@ from app.services.storage import generate_signed_upload_url
 from app.services.vision import VisionAPIError, detect_labels_gcs
 
 logger = structlog.get_logger()
+
+LABEL_RESULT_LIMIT: Final[int] = 8
+MILLIS_PER_SECOND: Final[int] = 1000
 
 router = APIRouter(prefix="/photos", tags=["photos"])
 
@@ -59,7 +64,10 @@ async def get_upload_url(
     """Generate a signed URL for direct upload to GCS."""
     bucket = f"{settings.gcp_project_id}.appspot.com"
     url, gcs_uri = await generate_signed_upload_url(
-        bucket, body.event_id, body.filename, body.content_type,
+        bucket,
+        body.event_id,
+        body.filename,
+        body.content_type,
     )
     return SignedUrlResponse(upload_url=url, gcs_uri=gcs_uri)
 
@@ -90,9 +98,7 @@ async def get_upload_url(
             "model": ErrorResponse,
             "description": "Daily Vision budget exhausted; retry after UTC midnight.",
             "content": {
-                "application/json": {
-                    "example": {"detail": "Vision API daily limit reached"}
-                }
+                "application/json": {"example": {"detail": "Vision API daily limit reached"}}
             },
         },
         502: {
@@ -111,18 +117,18 @@ async def label_photo(
         raise HTTPException(status_code=429, detail="Vision API daily limit reached")
 
     try:
-        labels = await detect_labels_gcs(body.gcs_uri, max_results=8)
+        labels = await detect_labels_gcs(body.gcs_uri, max_results=LABEL_RESULT_LIMIT)
     except VisionAPIError as exc:
         raise HTTPException(status_code=502, detail="Vision API error") from exc
 
-    doc_ref = (
-        db.collection("events").document(body.event_id).collection("photos").document()
+    doc_ref = db.collection("events").document(body.event_id).collection("photos").document()
+    await doc_ref.set(
+        {
+            "gcsUri": body.gcs_uri,
+            "labels": labels,
+            "uploadedBy": user.get("uid", ""),
+            "timestamp": int(datetime.now(tz=UTC).timestamp() * MILLIS_PER_SECOND),
+        }
     )
-    await doc_ref.set({
-        "gcsUri": body.gcs_uri,
-        "labels": labels,
-        "uploadedBy": user.get("uid", ""),
-        "timestamp": int(time.time() * 1000),
-    })
 
     return LabelResponse(labels=labels, photo_id=doc_ref.id)

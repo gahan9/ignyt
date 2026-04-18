@@ -25,6 +25,9 @@ dev = [
     "pytest-asyncio",
     "pytest-cov",
     "ruff",
+    "mypy",
+    "bandit[toml]",
+    "pip-audit",
 ]
 
 [build-system]
@@ -34,12 +37,128 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 include = ["app*"]
 
+# ---------------------------------------------------------------------------
+# Ruff: lint + format + import sort. Replaces flake8, isort, pydocstyle,
+# pyupgrade. Run via:  `ruff check .`  and  `ruff format .`.
+# ---------------------------------------------------------------------------
 [tool.ruff]
 target-version = "py311"
 line-length = 100
+extend-exclude = ["build", "dist", ".venv"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "N", "UP", "B"]
+select = [
+    "E", "W",   # pycodestyle
+    "F",        # pyflakes
+    "I",        # isort
+    "N",        # pep8-naming
+    "D",        # pydocstyle (Google convention configured below)
+    "UP",       # pyupgrade
+    "B",        # bugbear
+    "C4",       # comprehensions
+    "SIM",      # simplify
+    "PL",       # pylint subset (complexity, magic values, etc.)
+    "RUF",      # ruff-specific
+    "ASYNC",    # async correctness
+    "S",        # bandit subset
+    "TRY",      # exception hygiene (tryceratops)
+    "PTH",      # use pathlib
+    "ARG",      # unused arguments
+    "T20",      # no print/pprint in app code
+]
+ignore = [
+    "D203",     # 1 blank line before class docstring (conflicts with D211)
+    "D213",     # multi-line docstring summary on second line (conflicts with D212)
+    "PLR0913",  # function args — bundled responses already use Pydantic
+    "TRY003",   # long exception messages — fine for HTTPException details
+    "TRY300",   # "move to else" — overly opinionated, harms readability here
+    "TRY301",   # "abstract raise to inner function" — same
+    "PLW0603",  # `global` for lazy singleton — accepted pattern (see _get_client)
+    "RUF001",   # ambiguous unicode in strings — intentional typography in prompts
+]
 
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+# Tests: relax docstring + assert + magic-value + style rules. Tests are
+# documentation; the test names + AAA structure carry the intent.
+"tests/**" = [
+    "D",        # docstrings
+    "S101",     # use of `assert`
+    "PLR2004",  # magic value comparisons
+    "ARG",      # unused arguments (fixtures)
+    "ANN",      # missing annotations
+    "SLF001",   # private member access (mocking + cost_guard internals)
+    "PLW0108",  # unnecessary lambda (mock side_effect patterns)
+    "SIM117",   # nested with-blocks (sometimes clearer in tests)
+    "E501",     # long lines (mock paths, long fixture strings)
+]
+# Scripts: allow print() — they're CLIs.
+"scripts/**" = ["T20"]
+# __init__.py: empty re-export shims don't need module docstrings.
+"**/__init__.py" = ["D104"]
+# FastAPI route modules: `Depends(...)` in defaults is the canonical pattern.
+"app/api/**/*.py" = ["B008"]
+"app/core/security.py" = ["B008"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+# ---------------------------------------------------------------------------
+# Mypy: static type checking. Strict mode for new code; tests relaxed.
+# Run via:  `mypy app`.
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unreachable = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+disallow_any_generics = true
+no_implicit_reexport = true
+plugins = ["pydantic.mypy"]
+# Third-party SDKs without stubs:
+[[tool.mypy.overrides]]
+module = [
+    "google.generativeai.*",
+    "google.cloud.*",
+    "firebase_admin.*",
+    "qrcode.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+
+# ---------------------------------------------------------------------------
+# Bandit: security linting (SAST). Run via:  `bandit -r app -c pyproject.toml`.
+# ---------------------------------------------------------------------------
+[tool.bandit]
+exclude_dirs = ["tests", ".venv", "build", "dist"]
+skips = [
+    "B101",  # assert_used — fine in app code (Pydantic invariants)
+]
+
+# ---------------------------------------------------------------------------
+# Pytest: async mode + coverage gate.
+# ---------------------------------------------------------------------------
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+]
+testpaths = ["tests"]
+
+[tool.coverage.report]
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "\\.\\.\\.",
+]
+show_missing = true

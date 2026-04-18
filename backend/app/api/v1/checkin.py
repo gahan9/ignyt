@@ -1,4 +1,6 @@
-from typing import Any
+"""Check-in endpoints: QR scan and badge OCR."""
+
+from typing import Any, Final
 
 from fastapi import APIRouter, Depends, HTTPException
 from google.cloud.firestore_v1 import AsyncClient
@@ -18,6 +20,16 @@ from app.repositories.attendee_repo import (
     mark_checked_in,
 )
 from app.services.vision import extract_badge_text
+
+# Heuristic confidence emitted on a successful prefix match. Will become a
+# real fuzzy-match score once we add proper string-similarity ranking.
+BADGE_MATCH_CONFIDENCE: Final[float] = 0.85
+NO_MATCH_CONFIDENCE: Final[float] = 0.0
+
+# Firestore field names — centralised so a schema rename is a one-line edit.
+FIELD_CHECKED_IN: Final[str] = "checkedIn"
+FIELD_NAME: Final[str] = "name"
+FIELD_ID: Final[str] = "id"
 
 router = APIRouter(prefix="/checkin", tags=["checkin"])
 
@@ -67,11 +79,7 @@ router = APIRouter(prefix="/checkin", tags=["checkin"])
         404: {
             "model": ErrorResponse,
             "description": "Attendee id does not exist under the given event.",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Attendee not found"}
-                }
-            },
+            "content": {"application/json": {"example": {"detail": "Attendee not found"}}},
         },
     },
 )
@@ -85,18 +93,18 @@ async def scan_checkin(
     if not attendee:
         raise HTTPException(status_code=404, detail="Attendee not found")
 
-    if attendee.get("checkedIn"):
+    if attendee.get(FIELD_CHECKED_IN):
         return CheckInResponse(
-            attendee_id=attendee["id"],
-            name=attendee.get("name", ""),
+            attendee_id=attendee[FIELD_ID],
+            name=attendee.get(FIELD_NAME, ""),
             checked_in=True,
             message="Already checked in",
         )
 
     await mark_checked_in(db, body.event_id, body.attendee_id)
     return CheckInResponse(
-        attendee_id=attendee["id"],
-        name=attendee.get("name", ""),
+        attendee_id=attendee[FIELD_ID],
+        name=attendee.get(FIELD_NAME, ""),
         checked_in=True,
         message="Check-in successful!",
     )
@@ -161,17 +169,19 @@ async def badge_ocr(
     if not texts:
         return BadgeOcrResponse(detected_text=[], matched_attendee=None)
 
+    # Vision returns the full OCR'd text as the first annotation; subsequent
+    # entries are per-line. Splitting [0] gives us logical badge lines.
     full_text = texts[0] if texts else ""
     lines = [line.strip() for line in full_text.split("\n") if line.strip()]
 
-    matched = None
-    confidence = 0.0
+    matched: str | None = None
+    confidence = NO_MATCH_CONFIDENCE
     for line in lines:
         attendee = await find_attendee_by_name(db, body.event_id, line)
         if attendee:
-            matched = attendee["id"]
-            confidence = 0.85
-            await mark_checked_in(db, body.event_id, attendee["id"])
+            matched = attendee[FIELD_ID]
+            confidence = BADGE_MATCH_CONFIDENCE
+            await mark_checked_in(db, body.event_id, attendee[FIELD_ID])
             break
 
     return BadgeOcrResponse(

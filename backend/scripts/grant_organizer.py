@@ -1,4 +1,4 @@
-"""Grant or revoke the ``organizer`` Firebase custom claim on a user.
+r"""Grant or revoke the ``organizer`` Firebase custom claim on a user.
 
 Why this script exists
 ----------------------
@@ -62,7 +62,6 @@ from typing import Any
 import firebase_admin
 from firebase_admin import auth, credentials
 
-
 ORGANIZER_ROLE = "organizer"
 
 
@@ -90,9 +89,7 @@ def _resolve_user(email: str | None, uid: str | None) -> auth.UserRecord:
         ) from exc
 
 
-def _compute_next_claims(
-    existing: dict[str, Any], *, revoke: bool
-) -> dict[str, Any]:
+def _compute_next_claims(existing: dict[str, Any], *, revoke: bool) -> dict[str, Any]:
     """Return the merged claims payload we should persist.
 
     We merge instead of overwriting so callers can't accidentally wipe
@@ -107,6 +104,7 @@ def _compute_next_claims(
 
 
 def main(argv: list[str] | None = None) -> int:
+    """CLI entrypoint: parse args, resolve the user, write the merged claims."""
     parser = argparse.ArgumentParser(
         description="Grant/revoke the 'organizer' custom claim on a Firebase user.",
     )
@@ -114,7 +112,7 @@ def main(argv: list[str] | None = None) -> int:
         "--project-id",
         required=True,
         help="Firebase project id (the one hosting Firebase Auth / Firestore). "
-             "For ignyt this is typically 'ignyt-39f6e'.",
+        "For ignyt this is typically 'ignyt-39f6e'.",
     )
     target = parser.add_mutually_exclusive_group(required=True)
     target.add_argument("--email", help="Sign-in email of the target user.")

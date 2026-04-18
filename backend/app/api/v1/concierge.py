@@ -1,3 +1,5 @@
+"""Concierge chat endpoints (Gemini-backed streaming)."""
+
 from typing import Any
 
 from fastapi import APIRouter, Depends

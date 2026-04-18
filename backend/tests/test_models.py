@@ -41,9 +41,7 @@ class TestCheckInRequest:
 
 class TestCheckInResponse:
     def test_valid(self) -> None:
-        m = CheckInResponse(
-            attendee_id="att-001", name="Alice", checked_in=True, message="OK"
-        )
+        m = CheckInResponse(attendee_id="att-001", name="Alice", checked_in=True, message="OK")
         assert m.checked_in is True
 
 
@@ -64,9 +62,7 @@ class TestBadgeOcrResponse:
         assert m.confidence == 0.0
 
     def test_with_match(self) -> None:
-        m = BadgeOcrResponse(
-            detected_text=["Alice"], matched_attendee="att-001", confidence=0.85
-        )
+        m = BadgeOcrResponse(detected_text=["Alice"], matched_attendee="att-001", confidence=0.85)
         assert m.matched_attendee == "att-001"
 
 
@@ -126,9 +122,7 @@ class TestChatMessageIn:
 
 class TestConciergeRequest:
     def test_valid(self) -> None:
-        m = ConciergeRequest(
-            messages=[ChatMessageIn(role="user", content="Where is Room A?")]
-        )
+        m = ConciergeRequest(messages=[ChatMessageIn(role="user", content="Where is Room A?")])
         assert len(m.messages) == 1
 
     def test_empty_messages_raises(self) -> None:

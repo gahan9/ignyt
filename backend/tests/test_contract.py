@@ -90,11 +90,7 @@ def test_frontend_paths_are_defined_in_openapi(openapi_paths: set[str]) -> None:
         "the call sites moved. Update _CLIENT_CALL_RE in test_contract.py."
     )
 
-    unknown = [
-        p
-        for p in frontend_paths
-        if not _matches_any_openapi_path(p, openapi_paths)
-    ]
+    unknown = [p for p in frontend_paths if not _matches_any_openapi_path(p, openapi_paths)]
     assert not unknown, (
         "Frontend calls these endpoints that do NOT exist in the backend "
         f"OpenAPI schema: {sorted(unknown)}. Either the route was renamed "

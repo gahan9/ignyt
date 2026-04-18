@@ -1,3 +1,9 @@
+"""Composite v1 API router.
+
+Mounts the per-feature routers under ``/api/v1`` and exposes the
+``/api/v1/budget`` introspection endpoint.
+"""
+
 from fastapi import APIRouter
 
 from app.api.v1.checkin import router as checkin_router
@@ -39,6 +45,6 @@ router.include_router(photos_router)
         }
     },
 )
-async def get_budget_status() -> dict[str, int]:
-    """Returns current daily usage vs limits for cost-controlled services."""
-    return cost_guard.status
+async def get_budget_status() -> BudgetStatus:
+    """Return current daily usage vs limits for cost-controlled services."""
+    return BudgetStatus(**cost_guard.status)

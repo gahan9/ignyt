@@ -1,3 +1,5 @@
+"""Pydantic schemas for ``/api/v1/photos/*`` endpoints."""
+
 from pydantic import BaseModel, Field
 
 
@@ -28,8 +30,7 @@ class SignedUrlResponse(BaseModel):
     )
     gcs_uri: str = Field(
         description=(
-            "`gs://` URI the client passes back to `/photos/label` once "
-            "the PUT upload completes."
+            "`gs://` URI the client passes back to `/photos/label` once the PUT upload completes."
         ),
     )
 

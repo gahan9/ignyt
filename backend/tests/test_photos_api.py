@@ -38,8 +38,7 @@ class TestLabelPhoto:
     def test_success(self, authed_client: TestClient, mock_db: AsyncMock) -> None:
         mock_doc_ref = AsyncMock()
         mock_doc_ref.id = "photo-001"
-        mock_db.collection.return_value.document.return_value \
-            .collection.return_value.document.return_value = mock_doc_ref
+        mock_db.collection.return_value.document.return_value.collection.return_value.document.return_value = mock_doc_ref
 
         with patch(
             "app.api.v1.photos.detect_labels_gcs",
@@ -82,8 +81,7 @@ class TestLabelPhoto:
     ) -> None:
         mock_doc_ref = AsyncMock()
         mock_doc_ref.id = "photo-002"
-        mock_db.collection.return_value.document.return_value \
-            .collection.return_value.document.return_value = mock_doc_ref
+        mock_db.collection.return_value.document.return_value.collection.return_value.document.return_value = mock_doc_ref
 
         with patch(
             "app.api.v1.photos.detect_labels_gcs",
@@ -100,8 +98,7 @@ class TestLabelPhoto:
     def test_saves_to_firestore(self, authed_client: TestClient, mock_db: AsyncMock) -> None:
         mock_doc_ref = AsyncMock()
         mock_doc_ref.id = "photo-003"
-        mock_db.collection.return_value.document.return_value \
-            .collection.return_value.document.return_value = mock_doc_ref
+        mock_db.collection.return_value.document.return_value.collection.return_value.document.return_value = mock_doc_ref
 
         with patch(
             "app.api.v1.photos.detect_labels_gcs",

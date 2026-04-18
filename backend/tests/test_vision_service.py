@@ -6,7 +6,6 @@ import pytest
 from app.core.budget import cost_guard
 from app.services.vision import VisionAPIError, detect_labels_gcs, extract_badge_text
 
-
 SAMPLE_B64 = base64.b64encode(b"fake-image-bytes").decode()
 
 

@@ -1,10 +1,17 @@
-import { useCallback, useState } from "react";
+import { useCallback, useId, useMemo, useState } from "react";
 
 import { useAuth } from "@/hooks/useAuth";
 import { addDocument, useCollection } from "@/hooks/useFirestore";
 import type { Reaction, Question } from "@/types";
 
-const EMOJI_OPTIONS = ["👏", "🔥", "💡", "❤️", "😂", "🎉"];
+const EMOJI_OPTIONS: ReadonlyArray<{ emoji: string; label: string }> = [
+  { emoji: "👏", label: "Applause" },
+  { emoji: "🔥", label: "Fire" },
+  { emoji: "💡", label: "Insightful" },
+  { emoji: "❤️", label: "Love" },
+  { emoji: "😂", label: "Funny" },
+  { emoji: "🎉", label: "Celebrate" },
+];
 
 interface EngagementWallProps {
   eventId: string;
@@ -13,6 +20,7 @@ interface EngagementWallProps {
 
 function ReactionBar({ eventId, sessionId }: EngagementWallProps) {
   const { user } = useAuth();
+  const [error, setError] = useState<string | null>(null);
   const path = `events/${eventId}/sessions/${sessionId}/reactions`;
   const { docs: reactions } = useCollection<Reaction>(path, {
     orderByField: "timestamp",
@@ -23,15 +31,30 @@ function ReactionBar({ eventId, sessionId }: EngagementWallProps) {
   const sendReaction = useCallback(
     async (emoji: string) => {
       if (!user) return;
-      await addDocument(path, { emoji, userId: user.uid });
+      try {
+        await addDocument(path, { emoji, userId: user.uid });
+        setError(null);
+      } catch (err) {
+        // Surfacing the failure is critical: a silently-dropped reaction
+        // is a bad live-event experience and the user has no other signal.
+        setError(err instanceof Error ? err.message : "Could not send reaction");
+      }
     },
     [user, path],
   );
 
-  const emojiCounts = reactions.reduce<Record<string, number>>((acc, r) => {
-    acc[r.emoji] = (acc[r.emoji] ?? 0) + 1;
-    return acc;
-  }, {});
+  // ``reactions`` can hit ``limitCount`` quickly during a busy session;
+  // the previous inline ``reduce`` ran on every render and on every
+  // unrelated re-render of the parent. Memoising halves render cost
+  // when the reaction stream is stable.
+  const emojiCounts = useMemo(
+    () =>
+      reactions.reduce<Record<string, number>>((acc, r) => {
+        acc[r.emoji] = (acc[r.emoji] ?? 0) + 1;
+        return acc;
+      }, {}),
+    [reactions],
+  );
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
@@ -39,13 +62,15 @@ function ReactionBar({ eventId, sessionId }: EngagementWallProps) {
         React
       </h3>
       <div className="flex flex-wrap gap-2">
-        {EMOJI_OPTIONS.map((emoji) => (
+        {EMOJI_OPTIONS.map(({ emoji, label }) => (
           <button
             key={emoji}
+            type="button"
             onClick={() => sendReaction(emoji)}
+            aria-label={`React with ${label}`}
             className="flex items-center gap-1.5 rounded-full border border-gray-200 px-4 py-2 text-lg transition-all hover:scale-110 hover:border-brand-300 hover:bg-brand-50 active:scale-95"
           >
-            <span>{emoji}</span>
+            <span aria-hidden="true">{emoji}</span>
             {emojiCounts[emoji] ? (
               <span className="text-xs font-medium text-gray-600">
                 {emojiCounts[emoji]}
@@ -54,6 +79,11 @@ function ReactionBar({ eventId, sessionId }: EngagementWallProps) {
           </button>
         ))}
       </div>
+      {error ? (
+        <p className="mt-2 text-xs text-red-600" role="alert">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -61,6 +91,8 @@ function ReactionBar({ eventId, sessionId }: EngagementWallProps) {
 function QuestionBoard({ eventId, sessionId }: EngagementWallProps) {
   const { user } = useAuth();
   const [newQuestion, setNewQuestion] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const inputId = useId();
   const path = `events/${eventId}/sessions/${sessionId}/questions`;
   const { docs: questions, loading } = useCollection<Question>(path, {
     orderByField: "timestamp",
@@ -70,20 +102,25 @@ function QuestionBoard({ eventId, sessionId }: EngagementWallProps) {
 
   const submitQuestion = useCallback(async () => {
     if (!user || !newQuestion.trim()) return;
-    await addDocument(path, {
-      text: newQuestion.trim(),
-      userId: user.uid,
-      userName: user.displayName ?? "Anonymous",
-      upvotes: 0,
-    });
-    setNewQuestion("");
+    try {
+      await addDocument(path, {
+        text: newQuestion.trim(),
+        userId: user.uid,
+        userName: user.displayName ?? "Anonymous",
+        upvotes: 0,
+      });
+      setNewQuestion("");
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not submit question");
+    }
   }, [user, newQuestion, path]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
-        submitQuestion();
+        void submitQuestion();
       }
     },
     [submitQuestion],
@@ -92,11 +129,15 @@ function QuestionBoard({ eventId, sessionId }: EngagementWallProps) {
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
       <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
-        Q&A
+        Q&amp;A
       </h3>
 
       <div className="mb-4 flex gap-2">
+        <label htmlFor={inputId} className="sr-only">
+          Ask a question
+        </label>
         <input
+          id={inputId}
           type="text"
           value={newQuestion}
           onChange={(e) => setNewQuestion(e.target.value)}
@@ -106,13 +147,20 @@ function QuestionBoard({ eventId, sessionId }: EngagementWallProps) {
           className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
         />
         <button
-          onClick={submitQuestion}
+          type="button"
+          onClick={() => void submitQuestion()}
           disabled={!newQuestion.trim()}
           className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-40 transition-colors"
         >
           Ask
         </button>
       </div>
+
+      {error ? (
+        <p className="mb-2 text-xs text-red-600" role="alert">
+          {error}
+        </p>
+      ) : null}
 
       {loading ? (
         <p className="text-sm text-gray-400">Loading questions...</p>

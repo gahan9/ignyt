@@ -39,6 +39,18 @@ afterEach(() => {
 });
 
 describe("<EngagementWall />", () => {
+  // Accessible names emitted by the React bar — kept in sync with
+  // EMOJI_OPTIONS in EngagementWall.tsx. Emojis themselves are marked
+  // ``aria-hidden`` so screen-reader users hear human labels instead.
+  const EMOJI_LABELS: Record<string, RegExp> = {
+    "👏": /react with applause/i,
+    "🔥": /react with fire/i,
+    "💡": /react with insightful/i,
+    "❤️": /react with love/i,
+    "😂": /react with funny/i,
+    "🎉": /react with celebrate/i,
+  };
+
   it("renders React bar, Q&A, and empty states", () => {
     render(<EngagementWall eventId="demo-event" sessionId="kickoff" />);
 
@@ -48,9 +60,8 @@ describe("<EngagementWall />", () => {
     expect(
       screen.getByText(/no questions yet\. be the first/i),
     ).toBeInTheDocument();
-    // Emoji buttons present
-    for (const emoji of ["👏", "🔥", "💡", "❤️", "😂", "🎉"]) {
-      expect(screen.getByRole("button", { name: emoji })).toBeInTheDocument();
+    for (const label of Object.values(EMOJI_LABELS)) {
+      expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
     }
   });
 
@@ -58,7 +69,7 @@ describe("<EngagementWall />", () => {
     const user = userEvent.setup();
     render(<EngagementWall eventId="demo-event" sessionId="kickoff" />);
 
-    await user.click(screen.getByRole("button", { name: "🔥" }));
+    await user.click(screen.getByRole("button", { name: EMOJI_LABELS["🔥"] }));
 
     await waitFor(() => {
       expect(addDocumentMock).toHaveBeenCalledWith(
@@ -73,7 +84,7 @@ describe("<EngagementWall />", () => {
     const user = userEvent.setup();
 
     render(<EngagementWall eventId="demo-event" sessionId="kickoff" />);
-    await user.click(screen.getByRole("button", { name: "👏" }));
+    await user.click(screen.getByRole("button", { name: EMOJI_LABELS["👏"] }));
 
     expect(addDocumentMock).not.toHaveBeenCalled();
   });
@@ -95,9 +106,22 @@ describe("<EngagementWall />", () => {
 
     render(<EngagementWall eventId="demo-event" sessionId="kickoff" />);
 
-    // "🔥" button should render count "2"; "👏" should render "1".
-    expect(screen.getByRole("button", { name: /🔥.*2/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /👏.*1/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: EMOJI_LABELS["🔥"] }),
+    ).toHaveTextContent(/2/);
+    expect(
+      screen.getByRole("button", { name: EMOJI_LABELS["👏"] }),
+    ).toHaveTextContent(/1/);
+  });
+
+  it("surfaces an error message when reaction write fails", async () => {
+    addDocumentMock.mockRejectedValueOnce(new Error("network down"));
+    const user = userEvent.setup();
+    render(<EngagementWall eventId="demo-event" sessionId="kickoff" />);
+
+    await user.click(screen.getByRole("button", { name: EMOJI_LABELS["🔥"] }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/network down/i);
   });
 
   it("submits a question on Enter key and clears the input", async () => {

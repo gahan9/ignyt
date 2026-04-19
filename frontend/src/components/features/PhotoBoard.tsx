@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import { apiPost } from "@/lib/api";
 import { useCollection } from "@/hooks/useFirestore";
@@ -11,6 +11,8 @@ export default function PhotoBoard() {
   const [uploading, setUploading] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const fileInputId = useId();
+  const statusId = useId();
   // Track the in-flight controller and the auto-clear timeout so we
   // can cancel both on unmount or when a fresh upload starts. Without
   // this an in-flight upload kept reading bytes after the user
@@ -114,16 +116,32 @@ export default function PhotoBoard() {
       </div>
 
       <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <label
+          htmlFor={fileInputId}
+          className="mb-2 block text-sm font-medium text-gray-700"
+        >
+          Choose a photo to upload
+        </label>
         <input
+          id={fileInputId}
           ref={fileRef}
           type="file"
           accept="image/*"
           onChange={handleUpload}
           disabled={uploading}
+          aria-describedby={status ? statusId : undefined}
+          aria-busy={uploading || undefined}
           className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-lg file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-brand-700 hover:file:bg-brand-100 disabled:opacity-50"
         />
         {status && (
-          <p className="mt-2 text-sm text-gray-600">{status}</p>
+          <p
+            id={statusId}
+            role="status"
+            aria-live="polite"
+            className="mt-2 text-sm text-gray-600"
+          >
+            {status}
+          </p>
         )}
       </div>
 

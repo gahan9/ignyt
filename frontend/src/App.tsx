@@ -407,6 +407,18 @@ function AppShell() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/*
+        Skip-link: WCAG 2.4.1 (Bypass Blocks). Hidden until a keyboard
+        user tabs onto it; first focusable element on the page lets
+        screen-reader and motor-impaired users jump past the nav.
+      */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-brand-600 focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-white focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-brand-700"
+      >
+        Skip to main content
+      </a>
+
       {/* Header */}
       <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/90 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4 sm:px-6">
@@ -552,7 +564,11 @@ function AppShell() {
       </header>
 
       {/* Content */}
-      <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="mx-auto max-w-5xl px-4 py-6 sm:px-6 focus:outline-none"
+      >
         <ErrorBoundary>
           <Routes>
             <Route path="/" element={<EventPage />} />

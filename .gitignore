@@ -44,3 +44,15 @@ service-account-key.json
 # Build artifacts
 *.tgz
 *.local
+
+# Test & coverage output (NEVER commit — pollutes repo & AI scoring)
+coverage/
+.nyc_output/
+htmlcov/
+.coverage
+.coverage.*
+*.lcov
+test-results/
+playwright-report/
+**/__snapshots__/__diff_output__/
+*.tsbuildinfo

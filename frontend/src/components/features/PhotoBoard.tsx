@@ -139,14 +139,16 @@ export default function PhotoBoard() {
               className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm"
             >
               <div className="aspect-video bg-gray-100 flex items-center justify-center">
-                <span className="text-3xl">📷</span>
+                <span className="text-3xl" role="img" aria-label="Photo placeholder">
+                  📷
+                </span>
               </div>
               <div className="p-3">
                 {photo.labels && photo.labels.length > 0 ? (
                   <div className="flex flex-wrap gap-1">
-                    {photo.labels.map((label, i) => (
+                    {photo.labels.map((label) => (
                       <span
-                        key={i}
+                        key={`${photo.id}:${label}`}
                         className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-700"
                       >
                         {label}

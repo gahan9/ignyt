@@ -8,6 +8,7 @@ resulting ``gs://`` URI back to the API for downstream processing.
 import asyncio
 import uuid
 from datetime import timedelta
+from functools import lru_cache
 from typing import Final
 
 import structlog
@@ -20,15 +21,15 @@ logger = structlog.get_logger()
 SIGNED_URL_TTL: Final[timedelta] = timedelta(minutes=15)
 DEFAULT_CONTENT_TYPE: Final[str] = "image/jpeg"
 
-_client: storage.Client | None = None
 
-
+@lru_cache(maxsize=1)
 def _get_client() -> storage.Client:
-    """Lazily instantiate (and memoise) the GCS SDK client."""
-    global _client
-    if _client is None:
-        _client = storage.Client(project=settings.gcp_project_id)
-    return _client
+    """Lazily instantiate (and memoise) the GCS SDK client.
+
+    See ``app.services.vision._get_client`` for the rationale on
+    preferring ``functools.lru_cache`` over a module-level singleton.
+    """
+    return storage.Client(project=settings.gcp_project_id)
 
 
 def _blocking_signed_url(

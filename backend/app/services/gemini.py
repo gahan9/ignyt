@@ -14,6 +14,7 @@ response is streaming.
 
 import asyncio
 from collections.abc import AsyncGenerator, Iterator
+from functools import lru_cache
 from typing import Any, Final
 
 import google.generativeai as genai
@@ -31,11 +32,6 @@ BUDGET_EXHAUSTED_MESSAGE: Final[str] = (
     "I've reached my daily conversation limit to stay within budget. Please try again tomorrow!"
 )
 GENERIC_ERROR_MESSAGE: Final[str] = "Sorry, I encountered an error. Please try again."
-
-# `Any` is used here because ``genai.GenerativeModel`` does not export a
-# stable, importable type — the SDK builds it dynamically from proto
-# definitions. Re-evaluate when google-generativeai ships proper stubs.
-_model: Any = None
 
 EVENT_SYSTEM_PROMPT = """You are Ignyt AI, a helpful concierge for a live physical event.
 
@@ -70,20 +66,26 @@ Facilities:
 """
 
 
+@lru_cache(maxsize=1)
 def _get_model() -> Any:
-    """Lazily configure the SDK and instantiate (memoised) the Gemini model."""
-    global _model
-    if _model is None:
-        genai.configure(api_key=settings.gemini_api_key)
-        _model = genai.GenerativeModel(
-            model_name=GEMINI_MODEL_NAME,
-            system_instruction=EVENT_SYSTEM_PROMPT.format(event_context=DEFAULT_EVENT_CONTEXT),
-            generation_config=genai.GenerationConfig(
-                max_output_tokens=settings.max_tokens_per_request,
-                temperature=GEMINI_TEMPERATURE,
-            ),
-        )
-    return _model
+    """Lazily configure the SDK and instantiate (memoised) the Gemini model.
+
+    ``lru_cache`` is preferred over a hand-rolled module-level ``global``:
+    it is thread-safe, has explicit ``cache_clear()`` semantics that tests
+    can invoke (no need to ``patch`` a module attribute), and removes the
+    "forgot ``global``" footgun. The cached return type is ``Any`` because
+    ``genai.GenerativeModel`` is built from proto definitions at runtime
+    and the SDK ships no static type for it.
+    """
+    genai.configure(api_key=settings.gemini_api_key)
+    return genai.GenerativeModel(
+        model_name=GEMINI_MODEL_NAME,
+        system_instruction=EVENT_SYSTEM_PROMPT.format(event_context=DEFAULT_EVENT_CONTEXT),
+        generation_config=genai.GenerationConfig(
+            max_output_tokens=settings.max_tokens_per_request,
+            temperature=GEMINI_TEMPERATURE,
+        ),
+    )
 
 
 async def chat_stream(

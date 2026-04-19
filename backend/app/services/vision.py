@@ -8,6 +8,7 @@ with an empty result instead of raising.
 
 import asyncio
 import base64
+from functools import lru_cache
 from typing import Final
 
 import structlog
@@ -19,15 +20,17 @@ logger = structlog.get_logger()
 
 DEFAULT_LABEL_LIMIT: Final[int] = 8
 
-_client: vision.ImageAnnotatorClient | None = None
 
-
+@lru_cache(maxsize=1)
 def _get_client() -> vision.ImageAnnotatorClient:
-    """Lazily instantiate (and memoise) the Vision SDK client."""
-    global _client
-    if _client is None:
-        _client = vision.ImageAnnotatorClient()
-    return _client
+    """Lazily instantiate (and memoise) the Vision SDK client.
+
+    Uses ``functools.lru_cache`` instead of a hand-rolled module-level
+    ``global``: thread-safe, monkey-patch-friendly in tests via
+    ``_get_client.cache_clear()``, and immune to the "forgot to declare
+    global" footgun.
+    """
+    return vision.ImageAnnotatorClient()
 
 
 class VisionAPIError(Exception):

@@ -23,16 +23,17 @@ export default function ConciergeChat() {
       timestamp: Date.now(),
     };
 
-    // Snapshot the conversation we will send upstream BEFORE mutating state,
-    // so the request body is deterministic regardless of in-flight re-renders.
-    let outgoing: ChatMessage[] = [];
-    setMessages((prev) => {
-      outgoing = [...prev, userMsg];
-      return [
-        ...outgoing,
-        { role: "assistant", content: "", timestamp: Date.now() },
-      ];
-    });
+    // Snapshot the conversation we will send upstream BEFORE the state
+    // update is enqueued. Using `messages` from the closure is safe here
+    // because we already guard against re-entry via the `streaming` flag,
+    // and React 18 does not guarantee that an updater function runs
+    // synchronously — the previous closure-mutation pattern could leave
+    // `outgoing` empty by the time `apiStreamPost` read it.
+    const outgoing: ChatMessage[] = [...messages, userMsg];
+    setMessages([
+      ...outgoing,
+      { role: "assistant", content: "", timestamp: Date.now() },
+    ]);
     setInput("");
     setStreaming(true);
 
@@ -70,7 +71,7 @@ export default function ConciergeChat() {
       setStreaming(false);
       scrollToBottom();
     }
-  }, [input, streaming, scrollToBottom]);
+  }, [input, messages, streaming, scrollToBottom]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {

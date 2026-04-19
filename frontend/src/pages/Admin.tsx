@@ -203,7 +203,7 @@ export default function AdminPage() {
         <EmptyState onSeed={handleSeed} seeding={seeding} hasAny={attendees.length > 0} />
       ) : (
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 print:grid-cols-2">
-          {filtered.map((a) => (
+          {filtered.map((a: Attendee) => (
             <AttendeeCard key={a.id} attendee={a} onToggle={handleToggle} />
           ))}
         </section>

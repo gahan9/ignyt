@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import router as v1_router
 from app.core.config import settings
+from app.core.security_headers import SecurityHeadersMiddleware
 from app.models.common import HealthResponse
 
 logger = structlog.get_logger()
@@ -98,6 +99,10 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
     max_age=600,
 )
+
+# Outer-most middleware so headers are stamped on every response, including
+# the CORS pre-flight responses produced above.
+app.add_middleware(SecurityHeadersMiddleware)
 
 app.include_router(v1_router)
 

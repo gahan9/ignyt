@@ -49,20 +49,22 @@ class TestCostGuardVision:
 
 class TestCostGuardDailyReset:
     def test_resets_on_date_change(self, fresh_cost_guard: CostGuard) -> None:
+        # Production reads the rollover boundary from ``_today_utc`` rather
+        # than ``date.today``; patching the helper is the only way to drive
+        # the reset branch in ``_maybe_reset``. The previous patch on
+        # ``app.core.budget.date`` was a no-op because ``_today_utc`` calls
+        # ``datetime.now(tz=UTC).date()`` and never touches the class.
         fresh_cost_guard.record_gemini()
         fresh_cost_guard.record_vision()
         assert fresh_cost_guard._gemini_count == 1
         assert fresh_cost_guard._vision_count == 1
 
         tomorrow = date(2099, 1, 1)
-        with patch("app.core.budget.date") as mock_date:
-            mock_date.today.return_value = tomorrow
-            mock_date.side_effect = lambda *a, **kw: date(*a, **kw)
-
+        with patch("app.core.budget._today_utc", return_value=tomorrow):
             assert fresh_cost_guard.check_gemini() is True
-
-        assert fresh_cost_guard._gemini_count == 0
-        assert fresh_cost_guard._vision_count == 0
+            assert fresh_cost_guard._gemini_count == 0
+            assert fresh_cost_guard._vision_count == 0
+            assert fresh_cost_guard._reset_date == tomorrow
 
     def test_no_reset_same_day(self, fresh_cost_guard: CostGuard) -> None:
         fresh_cost_guard.record_gemini()

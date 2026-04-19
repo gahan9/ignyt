@@ -1,5 +1,6 @@
 """Check-in endpoints: QR scan and badge OCR."""
 
+import asyncio
 from typing import Any, Final
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -174,10 +175,18 @@ async def badge_ocr(
     full_text = texts[0] if texts else ""
     lines = [line.strip() for line in full_text.split("\n") if line.strip()]
 
+    # Fire all candidate-line lookups in parallel. A typical badge has 3-6
+    # OCR'd lines, and ``find_attendee_by_name`` issues one Firestore query
+    # each; serialising them adds round-trip latency that the user feels
+    # while staring at the camera. Order is preserved so we still pick the
+    # earliest line that matches (badges put the name on the first line).
+    lookups = await asyncio.gather(
+        *(find_attendee_by_name(db, body.event_id, line) for line in lines)
+    )
+
     matched: str | None = None
     confidence = NO_MATCH_CONFIDENCE
-    for line in lines:
-        attendee = await find_attendee_by_name(db, body.event_id, line)
+    for attendee in lookups:
         if attendee:
             matched = attendee[FIELD_ID]
             confidence = BADGE_MATCH_CONFIDENCE

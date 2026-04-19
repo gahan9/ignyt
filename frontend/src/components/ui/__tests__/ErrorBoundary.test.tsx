@@ -7,8 +7,9 @@ import { ErrorBoundary } from "../ErrorBoundary";
 
 // A child that throws on render the first time then renders normally after
 // `reset` flips `shouldThrow` to false via a ref. We flip it by re-rendering
-// with a key prop from a wrapper.
-function Boom({ message = "synthetic failure" }: { message?: string }) {
+// with a key prop from a wrapper. The explicit `: never` return type tells
+// TS the function never produces a value, so JSX accepts it as a component.
+function Boom({ message = "synthetic failure" }: { message?: string }): never {
   throw new Error(message);
 }
 
@@ -74,13 +75,11 @@ describe("<ErrorBoundary />", () => {
     const user = userEvent.setup();
     function Toggle() {
       // Externally-driven throw so Strict-Mode double-invocation and
-      // post-reset re-renders don't race a module-scoped flag.
-      const [ok, setOk] = useState(false);
+      // post-reset re-renders don't race a module-scoped flag. We only
+      // read the state here; the Harness owns the writable setter.
+      const [ok] = useState(false);
       if (!ok) throw new Error("first-only");
       return <p>recovered!</p>;
-      // Note: Toggle never renders this, but exposing setOk on window lets the
-      // test flip it between render passes. Using a ref captures the setter.
-      // See below for how we drive it via state held outside the boundary.
     }
     function Harness() {
       const [ok, setOk] = useState(false);
@@ -106,7 +105,7 @@ describe("<ErrorBoundary />", () => {
   });
 
   it("falls back to 'Unknown error' when the Error has no message", () => {
-    function Silent() {
+    function Silent(): never {
       throw new Error();
     }
     render(

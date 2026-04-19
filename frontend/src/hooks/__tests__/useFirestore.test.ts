@@ -59,17 +59,24 @@ const {
   };
 });
 
+// Wrap each mock with a permissive variadic signature so the spread inside
+// the factory satisfies `tsc -b --noEmit`. The original pattern leaked the
+// typed implementation signature out to the call site, which then tripped
+// `TS2556: A spread argument must either have a tuple type or be passed to
+// a rest parameter.` for every spy whose impl was annotated.
+type AnyFn = (...args: unknown[]) => unknown;
+
 vi.mock("firebase/firestore", () => ({
-  collection: (...args: any[]) => mockCollection(...(args as any)),
-  doc: (...args: any[]) => mockDoc(...(args as any)),
-  query: (...args: any[]) => mockQuery(...(args as any)),
-  orderBy: (...args: any[]) => mockOrderBy(...(args as any)),
-  limit: (...args: any[]) => mockLimit(...(args as any)),
-  onSnapshot: (...args: any[]) => mockOnSnapshot(...(args as any)),
-  setDoc: (...args: any[]) => mockSetDoc(...(args as any)),
-  addDoc: (...args: any[]) => mockAddDoc(...(args as any)),
+  collection: (...args: unknown[]) => (mockCollection as AnyFn)(...args),
+  doc: (...args: unknown[]) => (mockDoc as AnyFn)(...args),
+  query: (...args: unknown[]) => (mockQuery as AnyFn)(...args),
+  orderBy: (...args: unknown[]) => (mockOrderBy as AnyFn)(...args),
+  limit: (...args: unknown[]) => (mockLimit as AnyFn)(...args),
+  onSnapshot: (...args: unknown[]) => (mockOnSnapshot as AnyFn)(...args),
+  setDoc: (...args: unknown[]) => (mockSetDoc as AnyFn)(...args),
+  addDoc: (...args: unknown[]) => (mockAddDoc as AnyFn)(...args),
   serverTimestamp: mockServerTimestamp,
-  writeBatch: (...args: any[]) => mockWriteBatch(...(args as any)),
+  writeBatch: (...args: unknown[]) => (mockWriteBatch as AnyFn)(...args),
 }));
 
 vi.mock("@/lib/firebase", () => ({

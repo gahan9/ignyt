@@ -11,15 +11,19 @@ const updateDocMock = vi.fn();
 const docMock = vi.fn((_db, path, id) => ({ __docPath: `${path}/${id}` }));
 const serverTimestampMock = vi.fn(() => "__ts__");
 
+// Permissive variadic signature so spread arguments satisfy
+// `tsc -b --noEmit` without losing the typed implementation behaviour.
+type AnyFn = (...args: unknown[]) => unknown;
+
 vi.mock("@/hooks/useFirestore", () => ({
-  useCollection: (...args: any[]) => useCollectionMock(...(args as any)),
-  seedDemoData: (...args: any[]) => seedDemoDataMock(...(args as any)),
+  useCollection: (...args: unknown[]) => (useCollectionMock as AnyFn)(...args),
+  seedDemoData: (...args: unknown[]) => (seedDemoDataMock as AnyFn)(...args),
 }));
 
 vi.mock("firebase/firestore", () => ({
-  doc: (...args: any[]) => docMock(...(args as any)),
+  doc: (...args: unknown[]) => (docMock as AnyFn)(...args),
   serverTimestamp: () => serverTimestampMock(),
-  updateDoc: (...args: any[]) => updateDocMock(...(args as any)),
+  updateDoc: (...args: unknown[]) => (updateDocMock as AnyFn)(...args),
 }));
 
 vi.mock("@/lib/firebase", () => ({
@@ -32,7 +36,7 @@ const qrToDataURLMock = vi.fn(() =>
 );
 vi.mock("qrcode", () => ({
   default: {
-    toDataURL: (...args: any[]) => qrToDataURLMock(...(args as any)),
+    toDataURL: (...args: unknown[]) => (qrToDataURLMock as AnyFn)(...args),
   },
 }));
 

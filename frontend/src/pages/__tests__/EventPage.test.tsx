@@ -6,9 +6,13 @@ const getDocsMock = vi.fn();
 const collectionMock = vi.fn((_db, path) => ({ __collectionPath: path }));
 const seedDemoDataMock = vi.fn();
 
+// Permissive variadic signature so spread arguments satisfy
+// `tsc -b --noEmit` without losing the typed implementation behaviour.
+type AnyFn = (...args: unknown[]) => unknown;
+
 vi.mock("firebase/firestore", () => ({
-  getDocs: (...args: any[]) => getDocsMock(...(args as any)),
-  collection: (...args: any[]) => collectionMock(...(args as any)),
+  getDocs: (...args: unknown[]) => (getDocsMock as AnyFn)(...args),
+  collection: (...args: unknown[]) => (collectionMock as AnyFn)(...args),
 }));
 
 vi.mock("@/lib/firebase", () => ({
@@ -16,7 +20,7 @@ vi.mock("@/lib/firebase", () => ({
 }));
 
 vi.mock("@/hooks/useFirestore", () => ({
-  seedDemoData: (...args: any[]) => seedDemoDataMock(...(args as any)),
+  seedDemoData: (...args: unknown[]) => (seedDemoDataMock as AnyFn)(...args),
 }));
 
 // EngagementWall has its own Firestore subscriptions; stub it to keep this

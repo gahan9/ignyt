@@ -5,38 +5,59 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // seedDemoData touches many firestore APIs. Rather than spin up a full
 // emulator for a unit test, we stub the SDK at the import boundary and
 // assert that seedDemoData produces the *right sequence* of writes.
-
-const mockSetDoc = vi.fn();
-const mockAddDoc = vi.fn();
-const mockDoc = vi.fn((_db: unknown, path: string, id?: string) => ({
-  __path: id ? `${path}/${id}` : path,
-}));
-const mockCollection = vi.fn((_db: unknown, path: string) => ({ __coll: path }));
-const mockQuery = vi.fn((colRef, ...parts) => ({ __query: colRef, parts }));
-const mockOrderBy = vi.fn((field, dir) => ({ __orderBy: field, dir }));
-const mockLimit = vi.fn((n) => ({ __limit: n }));
-const mockServerTimestamp = vi.fn(() => "__server_ts__");
+//
+// `vi.mock(...)` is hoisted to the top of the file, so any identifiers
+// referenced by its factory must also be hoisted — otherwise we hit
+// `ReferenceError: Cannot access 'mockServerTimestamp' before initialization`.
+// Wrap every mock spy in `vi.hoisted(...)` so they exist by the time the
+// factory runs.
 
 type SnapshotCb = (snapshot: {
   docs: Array<{ id: string; data: () => Record<string, unknown> }>;
 }) => void;
 
-const onSnapshotState = {
-  callback: null as SnapshotCb | null,
-  unsubscribe: vi.fn(),
-};
-
-const mockOnSnapshot = vi.fn((_q, cb: SnapshotCb) => {
-  onSnapshotState.callback = cb;
-  return onSnapshotState.unsubscribe;
+const {
+  mockSetDoc,
+  mockAddDoc,
+  mockDoc,
+  mockCollection,
+  mockQuery,
+  mockOrderBy,
+  mockLimit,
+  mockServerTimestamp,
+  mockOnSnapshot,
+  batchSetSpy,
+  batchCommitSpy,
+  mockWriteBatch,
+  onSnapshotState,
+} = vi.hoisted(() => {
+  const onSnapshotStateLocal = {
+    callback: null as SnapshotCb | null,
+    unsubscribe: vi.fn(),
+  };
+  const batchSet = vi.fn();
+  const batchCommit = vi.fn().mockResolvedValue(undefined);
+  return {
+    mockSetDoc: vi.fn(),
+    mockAddDoc: vi.fn(),
+    mockDoc: vi.fn((_db: unknown, path: string, id?: string) => ({
+      __path: id ? `${path}/${id}` : path,
+    })),
+    mockCollection: vi.fn((_db: unknown, path: string) => ({ __coll: path })),
+    mockQuery: vi.fn((colRef, ...parts) => ({ __query: colRef, parts })),
+    mockOrderBy: vi.fn((field, dir) => ({ __orderBy: field, dir })),
+    mockLimit: vi.fn((n) => ({ __limit: n })),
+    mockServerTimestamp: vi.fn(() => "__server_ts__"),
+    mockOnSnapshot: vi.fn((_q: unknown, cb: SnapshotCb) => {
+      onSnapshotStateLocal.callback = cb;
+      return onSnapshotStateLocal.unsubscribe;
+    }),
+    batchSetSpy: batchSet,
+    batchCommitSpy: batchCommit,
+    mockWriteBatch: vi.fn(() => ({ set: batchSet, commit: batchCommit })),
+    onSnapshotState: onSnapshotStateLocal,
+  };
 });
-
-const batchSetSpy = vi.fn();
-const batchCommitSpy = vi.fn().mockResolvedValue(undefined);
-const mockWriteBatch = vi.fn(() => ({
-  set: batchSetSpy,
-  commit: batchCommitSpy,
-}));
 
 vi.mock("firebase/firestore", () => ({
   collection: (...args: any[]) => mockCollection(...(args as any)),

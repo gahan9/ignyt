@@ -23,16 +23,18 @@ export default function ConciergeChat() {
       timestamp: Date.now(),
     };
 
-    const updated = [...messages, userMsg];
-    setMessages(updated);
+    // Snapshot the conversation we will send upstream BEFORE mutating state,
+    // so the request body is deterministic regardless of in-flight re-renders.
+    let outgoing: ChatMessage[] = [];
+    setMessages((prev) => {
+      outgoing = [...prev, userMsg];
+      return [
+        ...outgoing,
+        { role: "assistant", content: "", timestamp: Date.now() },
+      ];
+    });
     setInput("");
     setStreaming(true);
-
-    const assistantTimestamp = Date.now();
-    setMessages([
-      ...updated,
-      { role: "assistant", content: "", timestamp: assistantTimestamp },
-    ]);
 
     const appendToAssistant = (append: string) => {
       setMessages((prev) => {
@@ -51,7 +53,7 @@ export default function ConciergeChat() {
       await apiStreamPost(
         "/v1/concierge/chat",
         {
-          messages: updated.map((m) => ({
+          messages: outgoing.map((m) => ({
             role: m.role,
             content: m.content,
           })),
@@ -68,7 +70,7 @@ export default function ConciergeChat() {
       setStreaming(false);
       scrollToBottom();
     }
-  }, [input, streaming, messages, scrollToBottom]);
+  }, [input, streaming, scrollToBottom]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -118,7 +120,7 @@ export default function ConciergeChat() {
         )}
         {messages.map((msg, i) => (
           <div
-            key={i}
+            key={`${msg.timestamp}-${msg.role}-${i}`}
             className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
           >
             <div

@@ -35,6 +35,20 @@ jobs:
       - name: Lint (ruff)
         run: ruff check app tests
 
+      - name: Format check (ruff)
+        run: ruff format --check app tests
+
+      - name: Type-check (mypy --strict)
+        run: mypy app
+
+      - name: Security lint (bandit)
+        run: bandit -r app -c pyproject.toml -ll
+
+      - name: Dependency CVE scan (pip-audit)
+        # Scan the resolved environment (editable install above pulls dev deps too).
+        # `--strict` fails on any vuln; flip to soft if you want warnings only.
+        run: pip-audit --strict --progress-spinner=off
+
       - name: Run tests with coverage
         env:
           # CostGuard + services read these at import time; tests mock but a

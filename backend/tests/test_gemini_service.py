@@ -172,7 +172,4 @@ class TestPromptInjectionContainment:
         # ``_get_model`` and must not be mutated by ``chat_stream``. The
         # mock would record any attribute assignment, but we want to
         # explicitly assert the absence of a setter call.
-        assert "system_instruction" not in {
-            call[0] for call in model.method_calls
-        }
-
+        assert "system_instruction" not in {call[0] for call in model.method_calls}

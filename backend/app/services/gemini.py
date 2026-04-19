@@ -120,9 +120,7 @@ async def chat_stream(
     last_message = messages[-1]["content"] if messages else ""
 
     try:
-        response = await asyncio.to_thread(
-            chat.send_message, last_message, stream=True
-        )
+        response = await asyncio.to_thread(chat.send_message, last_message, stream=True)
         cost_guard.record_gemini()
 
         # ``next()`` blocks until the SDK has the next chunk on the wire.

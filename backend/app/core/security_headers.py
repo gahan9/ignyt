@@ -20,10 +20,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 # carries HTML. Browsers ignore CSP on raw JSON, but defence-in-depth
 # matters when a future endpoint accidentally returns text/html.
 API_CSP: Final[str] = (
-    "default-src 'none'; "
-    "frame-ancestors 'none'; "
-    "base-uri 'none'; "
-    "form-action 'none'"
+    "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
 )
 
 # Permissive CSP for FastAPI's bundled docs UIs. Swagger UI and Redoc
@@ -81,9 +78,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         )
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("X-Frame-Options", "DENY")
-        response.headers.setdefault(
-            "Referrer-Policy", "strict-origin-when-cross-origin"
-        )
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         response.headers.setdefault(
             "Permissions-Policy",
             "camera=(), microphone=(), geolocation=()",

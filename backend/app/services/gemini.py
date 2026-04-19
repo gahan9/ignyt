@@ -4,9 +4,16 @@ Wraps the ``google.generativeai`` SDK to stream a chat response back to the
 API layer, enforcing per-day budget caps via :mod:`app.core.budget`. The
 system prompt and default event context live here as module constants so
 they can be diffed and reviewed independently of code.
+
+The Google AI SDK's ``send_message(stream=True)`` is a *blocking* call that
+returns a synchronous iterator. We dispatch both the initial RPC and each
+chunk pull through ``asyncio.to_thread`` so the FastAPI event loop stays
+free to serve health checks and other concurrent requests while a chat
+response is streaming.
 """
 
-from collections.abc import AsyncGenerator
+import asyncio
+from collections.abc import AsyncGenerator, Iterator
 from typing import Any, Final
 
 import google.generativeai as genai
@@ -111,12 +118,23 @@ async def chat_stream(
     last_message = messages[-1]["content"] if messages else ""
 
     try:
-        response = chat.send_message(last_message, stream=True)
+        response = await asyncio.to_thread(
+            chat.send_message, last_message, stream=True
+        )
         cost_guard.record_gemini()
 
-        for chunk in response:
-            if chunk.text:
-                yield chunk.text
+        # ``next()`` blocks until the SDK has the next chunk on the wire.
+        # Hop to a worker thread per chunk so the event loop can interleave
+        # other requests (health checks, parallel concierge sessions).
+        chunk_iter: Iterator[Any] = iter(response)
+        sentinel: object = object()
+        while True:
+            chunk = await asyncio.to_thread(next, chunk_iter, sentinel)
+            if chunk is sentinel:
+                break
+            text = getattr(chunk, "text", "")
+            if text:
+                yield text
     except Exception:
         # Broad catch is intentional: a streaming response that raises
         # mid-flight breaks the FastAPI ``StreamingResponse`` contract

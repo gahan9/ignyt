@@ -6,6 +6,7 @@ variables. In Cloud Run, sensitive values come from Secret Manager and are
 mounted as env vars at deploy time.
 """
 
+import json
 from typing import Any
 
 from pydantic import field_validator
@@ -38,7 +39,6 @@ class Settings(BaseSettings):
             return raw
         if isinstance(raw, str):
             if raw.startswith("["):
-                import json
                 try:
                     return json.loads(raw)
                 except json.JSONDecodeError:

@@ -117,6 +117,16 @@ describe("apiPost", () => {
 
     (auth as unknown as { currentUser: unknown }).currentUser = null;
   });
+
+  it("forwards an AbortSignal to fetch so callers can cancel", async () => {
+    globalThis.fetch = mockFetch({ ok: true });
+    const controller = new AbortController();
+
+    await apiPost("/cancellable", { x: 1 }, controller.signal);
+
+    const init = (fetch as ReturnType<typeof vi.fn>).mock.calls[0][1];
+    expect(init.signal).toBe(controller.signal);
+  });
 });
 
 describe("apiStreamPost", () => {
@@ -163,5 +173,42 @@ describe("apiStreamPost", () => {
     });
 
     await expect(apiStreamPost("/nobody", {}, vi.fn())).rejects.toThrow("No response body");
+  });
+
+  it("cancels the reader when the abort signal fires", async () => {
+    const cancel = vi.fn().mockResolvedValue(undefined);
+    // ``read`` returns a never-settling promise so the loop is waiting
+    // when we abort. Without the abort handler the test would hang.
+    let resolveRead: ((v: { done: boolean; value?: Uint8Array }) => void) | undefined;
+    const readPromise = new Promise<{ done: boolean; value?: Uint8Array }>(
+      (resolve) => {
+        resolveRead = resolve;
+      },
+    );
+    const mockReader = {
+      read: vi.fn().mockReturnValue(readPromise),
+      cancel,
+    };
+
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      body: { getReader: () => mockReader },
+    });
+
+    const controller = new AbortController();
+    const promise = apiStreamPost("/stream", {}, vi.fn(), controller.signal);
+
+    // Give the awaited fetch + getReader microtasks a turn so the
+    // abort listener is registered before we trip it. Without this the
+    // abort fires before the listener exists and ``cancel`` is never
+    // called — the same race that would bite a real component.
+    await Promise.resolve();
+    await Promise.resolve();
+
+    controller.abort();
+    expect(cancel).toHaveBeenCalledTimes(1);
+
+    resolveRead?.({ done: true });
+    await promise;
   });
 });

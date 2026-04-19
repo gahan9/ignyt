@@ -59,11 +59,16 @@ describe("<PhotoBoard />", () => {
     await user.upload(input, file);
 
     await waitFor(() => {
-      expect(apiPostMock).toHaveBeenNthCalledWith(1, "/v1/photos/upload-url", {
-        event_id: "demo-event",
-        filename: "crowd.jpg",
-        content_type: "image/jpeg",
-      });
+      expect(apiPostMock).toHaveBeenNthCalledWith(
+        1,
+        "/v1/photos/upload-url",
+        {
+          event_id: "demo-event",
+          filename: "crowd.jpg",
+          content_type: "image/jpeg",
+        },
+        expect.any(AbortSignal),
+      );
     });
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
@@ -71,14 +76,20 @@ describe("<PhotoBoard />", () => {
         expect.objectContaining({
           method: "PUT",
           headers: { "Content-Type": "image/jpeg" },
+          signal: expect.any(AbortSignal),
         }),
       );
     });
     await waitFor(() => {
-      expect(apiPostMock).toHaveBeenNthCalledWith(2, "/v1/photos/label", {
-        event_id: "demo-event",
-        gcs_uri: "gs://bucket/photos/xyz.jpg",
-      });
+      expect(apiPostMock).toHaveBeenNthCalledWith(
+        2,
+        "/v1/photos/label",
+        {
+          event_id: "demo-event",
+          gcs_uri: "gs://bucket/photos/xyz.jpg",
+        },
+        expect.any(AbortSignal),
+      );
     });
     expect(
       await screen.findByText(/done! labels: people, stage, applause/i),

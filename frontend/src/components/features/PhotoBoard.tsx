@@ -1,24 +1,56 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { apiPost } from "@/lib/api";
 import { useCollection } from "@/hooks/useFirestore";
 import { DEMO_EVENT_ID } from "@/lib/constants";
 import type { Photo } from "@/types";
 
+const STATUS_AUTO_CLEAR_MS = 5000;
+
 export default function PhotoBoard() {
   const [uploading, setUploading] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  // Track the in-flight controller and the auto-clear timeout so we
+  // can cancel both on unmount or when a fresh upload starts. Without
+  // this an in-flight upload kept reading bytes after the user
+  // navigated away, and the dangling ``setTimeout`` fired ``setStatus``
+  // on an unmounted tree (React warning + memory leak).
+  const abortRef = useRef<AbortController | null>(null);
+  const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { docs: photos, loading } = useCollection<Photo>(
     `events/${DEMO_EVENT_ID}/photos`,
     { orderByField: "timestamp", orderDirection: "desc", limitCount: 30 },
   );
 
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+      if (clearTimerRef.current !== null) {
+        clearTimeout(clearTimerRef.current);
+      }
+    };
+  }, []);
+
+  const scheduleStatusClear = useCallback(() => {
+    if (clearTimerRef.current !== null) {
+      clearTimeout(clearTimerRef.current);
+    }
+    clearTimerRef.current = setTimeout(() => {
+      setStatus(null);
+      clearTimerRef.current = null;
+    }, STATUS_AUTO_CLEAR_MS);
+  }, []);
+
   const handleUpload = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
+
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
 
       setUploading(true);
       setStatus("Getting upload URL...");
@@ -27,35 +59,49 @@ export default function PhotoBoard() {
         const { upload_url, gcs_uri } = await apiPost<{
           upload_url: string;
           gcs_uri: string;
-        }>("/v1/photos/upload-url", {
-          event_id: DEMO_EVENT_ID,
-          filename: file.name,
-          content_type: file.type || "image/jpeg",
-        });
+        }>(
+          "/v1/photos/upload-url",
+          {
+            event_id: DEMO_EVENT_ID,
+            filename: file.name,
+            content_type: file.type || "image/jpeg",
+          },
+          controller.signal,
+        );
 
         setStatus("Uploading to Cloud Storage...");
         await fetch(upload_url, {
           method: "PUT",
           headers: { "Content-Type": file.type || "image/jpeg" },
           body: file,
+          signal: controller.signal,
         });
 
         setStatus("Analyzing with Vision API...");
         const { labels } = await apiPost<{ labels: string[]; photo_id: string }>(
           "/v1/photos/label",
           { event_id: DEMO_EVENT_ID, gcs_uri },
+          controller.signal,
         );
 
         setStatus(`Done! Labels: ${labels.join(", ") || "none detected"}`);
       } catch (err) {
+        if (controller.signal.aborted) {
+          // The user navigated away or kicked off a fresh upload. Don't
+          // overwrite UI state — the new flow owns ``status`` now.
+          return;
+        }
         setStatus(err instanceof Error ? err.message : "Upload failed");
       } finally {
-        setUploading(false);
-        if (fileRef.current) fileRef.current.value = "";
-        setTimeout(() => setStatus(null), 5000);
+        if (abortRef.current === controller) {
+          abortRef.current = null;
+          setUploading(false);
+          if (fileRef.current) fileRef.current.value = "";
+          scheduleStatusClear();
+        }
       }
     },
-    [],
+    [scheduleStatusClear],
   );
 
   return (

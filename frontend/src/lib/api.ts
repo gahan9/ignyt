@@ -51,17 +51,28 @@ async function toApiError(res: Response): Promise<ApiError> {
   return new ApiError(res.status, res.statusText, message);
 }
 
-export async function apiGet<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, { headers: await getHeaders() });
+export async function apiGet<T>(
+  path: string,
+  signal?: AbortSignal,
+): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: await getHeaders(),
+    signal,
+  });
   if (!res.ok) throw await toApiError(res);
   return res.json();
 }
 
-export async function apiPost<T>(path: string, body: unknown): Promise<T> {
+export async function apiPost<T>(
+  path: string,
+  body: unknown,
+  signal?: AbortSignal,
+): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     method: "POST",
     headers: await getHeaders(),
     body: JSON.stringify(body),
+    signal,
   });
   if (!res.ok) throw await toApiError(res);
   return res.json();
@@ -71,21 +82,38 @@ export async function apiStreamPost(
   path: string,
   body: unknown,
   onChunk: (text: string) => void,
+  signal?: AbortSignal,
 ): Promise<void> {
   const res = await fetch(`${API_BASE}${path}`, {
     method: "POST",
     headers: await getHeaders(),
     body: JSON.stringify(body),
+    signal,
   });
   if (!res.ok) throw await toApiError(res);
 
   const reader = res.body?.getReader();
   if (!reader) throw new Error("No response body");
 
-  const decoder = new TextDecoder();
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    onChunk(decoder.decode(value, { stream: true }));
+  // ``signal.aborted`` short-circuits the read loop on cancel; without
+  // this the reader keeps draining bytes after the consumer is gone,
+  // wasting bandwidth and emitting state updates into an unmounted tree.
+  const onAbort = (): void => {
+    void reader.cancel().catch(() => {
+      // Cancelling an already-closed reader is fine, ignore.
+    });
+  };
+  signal?.addEventListener("abort", onAbort, { once: true });
+
+  try {
+    const decoder = new TextDecoder();
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (signal?.aborted) break;
+      onChunk(decoder.decode(value, { stream: true }));
+    }
+  } finally {
+    signal?.removeEventListener("abort", onAbort);
   }
 }

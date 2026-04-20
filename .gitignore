@@ -12,7 +12,16 @@ __pycache__/
 dist/
 build/
 .venv/
+.venv*/
 venv/
+venv*/
+env/
+env*/
+.python-version
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
 *.egg
 
 # Node
@@ -28,6 +37,8 @@ node_modules/
 .idea/
 *.swp
 *.swo
+*.iml
+.history/
 
 # OS
 .DS_Store

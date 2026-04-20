@@ -232,7 +232,9 @@ describe("<App /> shell + routing", () => {
 
     // Open the user menu (avatar button is the only button with the user's name).
     await user.click(screen.getByRole("button", { name: /ada lovelace/i }));
-    await user.click(screen.getByRole("button", { name: /sign out/i }));
+    // The item inside the dropdown uses role="menuitem" (ARIA disclosure
+    // pattern) after the a11y refactor, so we query by menuitem, not button.
+    await user.click(screen.getByRole("menuitem", { name: /sign out/i }));
 
     expect(auth.signOut).toHaveBeenCalledTimes(1);
   });

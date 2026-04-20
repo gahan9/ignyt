@@ -4,6 +4,7 @@ Verifies Firebase ID tokens supplied in the ``Authorization: Bearer <token>``
 header and exposes them as injectable ``dict`` claims via ``Depends()``.
 """
 
+from functools import lru_cache
 from typing import Any
 
 import firebase_admin
@@ -16,16 +17,17 @@ from app.core.config import settings
 
 logger = structlog.get_logger()
 
-_firebase_app: firebase_admin.App | None = None
 
-
+@lru_cache(maxsize=1)
 def _get_firebase_app() -> firebase_admin.App:
-    """Lazily initialise (and memoise) the Firebase Admin SDK app."""
-    global _firebase_app
-    if _firebase_app is None:
-        cred = credentials.ApplicationDefault()
-        _firebase_app = firebase_admin.initialize_app(cred, {"projectId": settings.gcp_project_id})
-    return _firebase_app
+    """Lazily initialise (and memoise) the Firebase Admin SDK app.
+
+    ``lru_cache`` gives us a thread-safe one-shot singleton without a
+    module-level mutable global. Tests can reset via
+    ``_get_firebase_app.cache_clear()`` if they ever need a fresh app.
+    """
+    cred = credentials.ApplicationDefault()
+    return firebase_admin.initialize_app(cred, {"projectId": settings.gcp_project_id})
 
 
 async def get_current_user(authorization: str = Header(...)) -> dict[str, Any]:

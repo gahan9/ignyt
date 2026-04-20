@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
 import { NavLink, Route, Routes } from "react-router-dom";
 
 import { useAuth } from "@/hooks/useAuth";
 import {
   BotIcon,
   CameraIcon,
+  LoaderIcon,
   LogOutIcon,
   MenuIcon,
   ScanLineIcon,
@@ -14,12 +15,19 @@ import {
   ZapIcon,
 } from "@/components/ui/Icons";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
-import CheckIn from "@/components/features/CheckIn";
-import ConciergeChat from "@/components/features/ConciergeChat";
-import PhotoBoard from "@/components/features/PhotoBoard";
-import AdminPage from "@/pages/Admin";
 import EventPage from "@/pages/EventPage";
 import NotFound from "@/pages/NotFound";
+
+// Route-level code splitting. The initial bundle only ships the event
+// landing page + auth shell; heavier feature routes (and their per-route
+// dependencies — html5-qrcode for Check-in, qrcode for Admin, the whole
+// concierge chat surface) are fetched lazily on first navigation. This
+// trims cold-start JS cost and keeps time-to-interactive stable on the
+// landing page, which is the one every user hits first.
+const ConciergeChat = lazy(() => import("@/components/features/ConciergeChat"));
+const CheckIn = lazy(() => import("@/components/features/CheckIn"));
+const PhotoBoard = lazy(() => import("@/components/features/PhotoBoard"));
+const AdminPage = lazy(() => import("@/pages/Admin"));
 
 const NAV_LINKS = [
   { to: "/", label: "Engage", icon: ZapIcon },
@@ -241,16 +249,32 @@ export function AppShell() {
         className="mx-auto max-w-5xl px-4 py-6 sm:px-6 focus:outline-none"
       >
         <ErrorBoundary>
-          <Routes>
-            <Route path="/" element={<EventPage />} />
-            <Route path="/concierge" element={<ConciergeChat />} />
-            <Route path="/checkin" element={<CheckIn />} />
-            <Route path="/photos" element={<PhotoBoard />} />
-            <Route path="/admin" element={<AdminPage />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <Suspense fallback={<RouteFallback />}>
+            <Routes>
+              <Route path="/" element={<EventPage />} />
+              <Route path="/concierge" element={<ConciergeChat />} />
+              <Route path="/checkin" element={<CheckIn />} />
+              <Route path="/photos" element={<PhotoBoard />} />
+              <Route path="/admin" element={<AdminPage />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
         </ErrorBoundary>
       </main>
+    </div>
+  );
+}
+
+function RouteFallback() {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      aria-label="Loading page"
+      className="flex items-center justify-center py-10 text-gray-500"
+    >
+      <LoaderIcon className="h-5 w-5" />
+      <span className="sr-only">Loading…</span>
     </div>
   );
 }

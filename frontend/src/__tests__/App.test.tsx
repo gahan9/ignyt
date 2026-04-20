@@ -189,28 +189,32 @@ describe("<App /> shell + routing", () => {
     expect(screen.getByText(/event-page-stub/i)).toBeInTheDocument();
   });
 
-  it("routes /concierge to the concierge feature", () => {
+  // Feature routes are React.lazy-loaded; `findByText` awaits the chunk
+  // resolving and the Suspense fallback swapping out. EventPage (the
+  // landing route) is still eager, so the nav-presence test above stays
+  // synchronous.
+  it("routes /concierge to the concierge feature", async () => {
     useAuthMock.mockReturnValue(authReady());
     renderWithRouter("/concierge");
-    expect(screen.getByText(/concierge-stub/i)).toBeInTheDocument();
+    expect(await screen.findByText(/concierge-stub/i)).toBeInTheDocument();
   });
 
-  it("routes /checkin to CheckIn", () => {
+  it("routes /checkin to CheckIn", async () => {
     useAuthMock.mockReturnValue(authReady());
     renderWithRouter("/checkin");
-    expect(screen.getByText(/checkin-stub/i)).toBeInTheDocument();
+    expect(await screen.findByText(/checkin-stub/i)).toBeInTheDocument();
   });
 
-  it("routes /photos to PhotoBoard", () => {
+  it("routes /photos to PhotoBoard", async () => {
     useAuthMock.mockReturnValue(authReady());
     renderWithRouter("/photos");
-    expect(screen.getByText(/photos-stub/i)).toBeInTheDocument();
+    expect(await screen.findByText(/photos-stub/i)).toBeInTheDocument();
   });
 
-  it("routes /admin to the admin console", () => {
+  it("routes /admin to the admin console", async () => {
     useAuthMock.mockReturnValue(authReady());
     renderWithRouter("/admin");
-    expect(screen.getByText(/admin-page-stub/i)).toBeInTheDocument();
+    expect(await screen.findByText(/admin-page-stub/i)).toBeInTheDocument();
   });
 
   it("falls back to a 404 page for unknown routes", () => {

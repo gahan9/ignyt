@@ -30,6 +30,32 @@ export default defineConfig({
   build: {
     sourcemap: true,
     chunkSizeWarningLimit: 600,
+    // Split the three big vendor surfaces into named chunks so app-code
+    // revisions don't invalidate long-lived library caches, and the
+    // browser can fetch them in parallel on cold load. Everything else
+    // is left to Rollup's auto-chunking — a catch-all "vendor" bucket
+    // here creates a cycle with the react bucket via transitively-shared
+    // deps (``use-sync-external-store`` etc.), which hurts cache shape.
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return undefined;
+          if (id.includes("firebase")) return "vendor-firebase";
+          if (id.includes("html5-qrcode") || id.includes("qrcode")) {
+            return "vendor-qrcode";
+          }
+          if (
+            id.includes("react-dom") ||
+            id.includes("react-router") ||
+            id.includes("/react/") ||
+            id.includes("scheduler")
+          ) {
+            return "vendor-react";
+          }
+          return undefined;
+        },
+      },
+    },
   },
   server: {
     proxy: {

@@ -21,7 +21,6 @@ export class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, info: { componentStack?: string | null }) {
     // React logs to console by default; keep this hook so we can wire a
     // real sink (Sentry, Cloud Logging, etc.) without touching callers.
-    // eslint-disable-next-line no-console
     console.error("ErrorBoundary caught:", error, info);
   }
 

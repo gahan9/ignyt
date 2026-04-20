@@ -12,7 +12,7 @@ os.environ.setdefault("EP_RATE_LIMIT_ENABLED", "false")
 
 from collections.abc import AsyncIterator
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
@@ -56,12 +56,22 @@ def fresh_cost_guard() -> CostGuard:
 
 
 @pytest.fixture()
-def mock_db() -> AsyncMock:
-    return AsyncMock()
+def mock_db() -> MagicMock:
+    """Firestore ``AsyncClient`` stand-in.
+
+    The real ``AsyncClient`` exposes a **sync** chain
+    (``.collection(...).document(...).collection(...).document(...)``) where
+    only the terminal I/O call (``.get()``, ``.update()``, ``.set()``,
+    ``.stream()``) is awaitable. Using ``AsyncMock`` as the root makes every
+    chained call return a coroutine, which crashes production code with
+    ``AttributeError: 'coroutine' object has no attribute 'document'``. Tests
+    attach ``AsyncMock`` to the terminal method explicitly.
+    """
+    return MagicMock()
 
 
 @pytest.fixture()
-def authed_client(mock_db: AsyncMock) -> TestClient:
+def authed_client(mock_db: MagicMock) -> TestClient:
     app.dependency_overrides[get_current_user] = _fake_current_user
     app.dependency_overrides[get_optional_user] = _fake_optional_user
     app.dependency_overrides[get_firestore] = lambda: mock_db

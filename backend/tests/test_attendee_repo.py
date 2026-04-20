@@ -13,11 +13,15 @@ from tests.conftest import async_iter_from_list, make_mock_doc
 
 def _build_attendees_query_mock(
     stream_docs: list[Any],
-) -> tuple[AsyncMock, MagicMock]:
+) -> tuple[MagicMock, MagicMock]:
     """Build a Firestore query-chain mock that terminates in ``stream()``.
 
-    Returns the ``db`` AsyncMock and the final query object so callers can
-    assert on ``where``/``limit`` invocations.
+    Firestore's ``AsyncClient`` exposes a sync chain (``.collection().document()
+    .collection()``) where only the terminal I/O call is awaitable. Using an
+    ``AsyncMock`` as the root makes every chained call return a coroutine,
+    which breaks production code that calls ``.document(...)`` on the result.
+    Root stays ``MagicMock``; only ``stream()``'s return value is an async
+    iterator so ``async for`` works.
     """
     final_query = MagicMock()
     final_query.stream.return_value = async_iter_from_list(stream_docs)
@@ -31,7 +35,7 @@ def _build_attendees_query_mock(
     col = MagicMock()
     col.where.side_effect = _where
 
-    db = AsyncMock()
+    db = MagicMock()
     db.collection.return_value.document.return_value.collection.return_value = col
     return db, final_query
 
@@ -41,7 +45,7 @@ class TestGetAttendee:
     async def test_found(self) -> None:
         doc = make_mock_doc({"name": "Alice", "checkedIn": False}, doc_id="att-001")
 
-        db = AsyncMock()
+        db = MagicMock()
         db.collection.return_value.document.return_value.collection.return_value.document.return_value.get = AsyncMock(
             return_value=doc
         )
@@ -56,7 +60,7 @@ class TestGetAttendee:
     async def test_not_found(self) -> None:
         doc = make_mock_doc(None)
 
-        db = AsyncMock()
+        db = MagicMock()
         db.collection.return_value.document.return_value.collection.return_value.document.return_value.get = AsyncMock(
             return_value=doc
         )
@@ -68,7 +72,7 @@ class TestGetAttendee:
 class TestMarkCheckedIn:
     @pytest.mark.asyncio
     async def test_calls_update(self) -> None:
-        db = AsyncMock()
+        db = MagicMock()
         update_mock = AsyncMock()
         db.collection.return_value.document.return_value.collection.return_value.document.return_value.update = update_mock
 

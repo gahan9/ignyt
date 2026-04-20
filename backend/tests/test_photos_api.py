@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from fastapi.testclient import TestClient
 
@@ -35,7 +35,7 @@ class TestGetUploadUrl:
 
 
 class TestLabelPhoto:
-    def test_success(self, authed_client: TestClient, mock_db: AsyncMock) -> None:
+    def test_success(self, authed_client: TestClient, mock_db: MagicMock) -> None:
         mock_doc_ref = AsyncMock()
         mock_doc_ref.id = "photo-001"
         mock_db.collection.return_value.document.return_value.collection.return_value.document.return_value = mock_doc_ref
@@ -64,7 +64,7 @@ class TestLabelPhoto:
 
         assert resp.status_code == 429
 
-    def test_vision_api_error(self, authed_client: TestClient, mock_db: AsyncMock) -> None:
+    def test_vision_api_error(self, authed_client: TestClient, mock_db: MagicMock) -> None:
         with patch(
             "app.api.v1.photos.detect_labels_gcs",
             new=AsyncMock(side_effect=VisionAPIError("INTERNAL_ERROR")),
@@ -77,7 +77,7 @@ class TestLabelPhoto:
         assert resp.status_code == 502
 
     def test_vision_transient_returns_empty_labels(
-        self, authed_client: TestClient, mock_db: AsyncMock
+        self, authed_client: TestClient, mock_db: MagicMock
     ) -> None:
         mock_doc_ref = AsyncMock()
         mock_doc_ref.id = "photo-002"
@@ -95,7 +95,7 @@ class TestLabelPhoto:
         assert resp.status_code == 200
         assert resp.json()["labels"] == []
 
-    def test_saves_to_firestore(self, authed_client: TestClient, mock_db: AsyncMock) -> None:
+    def test_saves_to_firestore(self, authed_client: TestClient, mock_db: MagicMock) -> None:
         mock_doc_ref = AsyncMock()
         mock_doc_ref.id = "photo-003"
         mock_db.collection.return_value.document.return_value.collection.return_value.document.return_value = mock_doc_ref

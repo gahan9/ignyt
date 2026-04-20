@@ -27,6 +27,12 @@ from app.main import app
 REPO_ROOT = Path(__file__).resolve().parents[2]
 FRONTEND_SRC = REPO_ROOT / "frontend" / "src"
 
+# The frontend client concatenates every ``apiGet``/``apiPost``/``apiStreamPost``
+# path against ``API_BASE`` (see ``frontend/src/lib/api.ts``), which defaults
+# to ``/api``. Static grep of the source yields the bare path literal, so we
+# reapply the same prefix here before matching against the OpenAPI schema.
+FRONTEND_API_BASE_PREFIX = "/api"
+
 
 # Matches:
 #   apiPost<X>("/v1/...", ...)
@@ -90,7 +96,11 @@ def test_frontend_paths_are_defined_in_openapi(openapi_paths: set[str]) -> None:
         "the call sites moved. Update _CLIENT_CALL_RE in test_contract.py."
     )
 
-    unknown = [p for p in frontend_paths if not _matches_any_openapi_path(p, openapi_paths)]
+    unknown = [
+        p
+        for p in frontend_paths
+        if not _matches_any_openapi_path(FRONTEND_API_BASE_PREFIX + p, openapi_paths)
+    ]
     assert not unknown, (
         "Frontend calls these endpoints that do NOT exist in the backend "
         f"OpenAPI schema: {sorted(unknown)}. Either the route was renamed "
@@ -101,11 +111,11 @@ def test_frontend_paths_are_defined_in_openapi(openapi_paths: set[str]) -> None:
 def test_openapi_has_expected_core_endpoints(openapi_paths: set[str]) -> None:
     """Lock in the handful of endpoints the demo flows depend on."""
     required = {
-        "/v1/checkin/scan",
-        "/v1/checkin/badge",
-        "/v1/concierge/chat",
-        "/v1/photos/upload-url",
-        "/v1/photos/label",
+        "/api/v1/checkin/scan",
+        "/api/v1/checkin/badge",
+        "/api/v1/concierge/chat",
+        "/api/v1/photos/upload-url",
+        "/api/v1/photos/label",
         "/health",
     }
     missing = required - openapi_paths
@@ -127,7 +137,7 @@ def test_auth_endpoints_require_authorization_header(openapi_paths: set[str]) ->
     schema = app.openapi()
     paths = schema.get("paths", {})
 
-    public = {"/health", "/v1", "/v1/budget"}
+    public = {"/health", "/api/v1/budget"}
     leaks: list[str] = []
 
     for path, ops in paths.items():

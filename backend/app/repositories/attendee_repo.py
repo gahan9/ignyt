@@ -58,7 +58,10 @@ async def mark_checked_in(db: AsyncClient, event_id: str, attendee_id: str) -> N
             "checkinTime": datetime.now(tz=UTC).isoformat(),
         }
     )
-    logger.info("attendee_checked_in", event=event_id, attendee=attendee_id)
+    # ``event`` is structlog's reserved kwarg for the log-event name (the
+    # positional arg above), so we log the Firestore parent as ``event_id``
+    # to avoid colliding with the bound logger's method signature.
+    logger.info("attendee_checked_in", event_id=event_id, attendee=attendee_id)
 
 
 async def find_attendee_by_name(

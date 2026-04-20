@@ -3,20 +3,24 @@ name = "ignyt-api"
 version = "0.1.0"
 description = "Ignyt – AI-powered physical event experience API"
 requires-python = ">=3.11"
+# Runtime deps are pinned to proven ranges to keep CI + Cloud Run builds
+# reproducible. FastAPI 0.120+ added ``annotated-doc`` as a transitive
+# requirement and Starlette 1.0 shipped with breaking changes; the ranges
+# below cap both until we deliberately opt into the new majors.
 dependencies = [
-    "fastapi",
-    "uvicorn[standard]",
-    "pydantic",
-    "pydantic-settings",
-    "firebase-admin",
-    "google-cloud-firestore",
-    "google-cloud-storage",
-    "google-cloud-vision",
-    "google-generativeai",
-    "python-multipart",
-    "structlog",
-    "qrcode[pil]",
-    "httpx",
+    "fastapi>=0.115,<0.120",
+    "uvicorn[standard]>=0.30,<1",
+    "pydantic>=2.7,<3",
+    "pydantic-settings>=2.2,<3",
+    "firebase-admin>=6,<7",
+    "google-cloud-firestore>=2.16,<3",
+    "google-cloud-storage>=2.14,<3",
+    "google-cloud-vision>=3.7,<4",
+    "google-generativeai>=0.8,<1",
+    "python-multipart>=0.0.9,<1",
+    "structlog>=24.1,<26",
+    "qrcode[pil]>=7.4,<9",
+    "httpx>=0.27,<1",
 ]
 
 [project.optional-dependencies]

@@ -85,6 +85,43 @@ jobs:
             backend/coverage.xml
             backend/junit.xml
 
+  semgrep:
+    name: SAST (semgrep)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install semgrep
+        run: python -m pip install --upgrade pip semgrep
+
+      # Two complementary rule packs:
+      #   p/ci         — fast generic findings, no false-positive churn
+      #   p/owasp-top-ten — security-focused web app patterns
+      # Output SARIF so GitHub Code Scanning surfaces findings inline on PRs.
+      - name: Run semgrep
+        run: |
+          semgrep --config=p/ci --config=p/owasp-top-ten \
+            --error \
+            --sarif --output=semgrep.sarif \
+            --exclude=frontend/node_modules \
+            --exclude=backend/.venv \
+            --exclude=backend/.venv312 \
+            --exclude=tests/rules/node_modules
+
+      - name: Upload SARIF to GitHub code scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep.sarif
+
   frontend:
     name: Frontend (vitest)
     runs-on: ubuntu-latest

@@ -126,6 +126,12 @@ disallow_any_generics = true
 no_implicit_reexport = true
 plugins = ["pydantic.mypy"]
 # Third-party SDKs without stubs:
+# Third-party Google SDKs don't ship PEP 561 stubs, and their ``__init__.py``
+# files re-export via ``from .sub import X`` without ``__all__``. Under
+# ``strict = true`` (which implies ``no_implicit_reexport = true``) mypy
+# therefore flags every ``genai.GenerativeModel`` / ``from google.cloud import
+# storage`` as ``attr-defined``. Flipping ``implicit_reexport = true`` here
+# scopes the relaxation to just these SDKs — our own code stays strict.
 [[tool.mypy.overrides]]
 module = [
     "google.generativeai.*",
@@ -134,6 +140,7 @@ module = [
     "qrcode.*",
 ]
 ignore_missing_imports = true
+implicit_reexport = true
 
 [[tool.mypy.overrides]]
 module = "tests.*"

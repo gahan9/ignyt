@@ -12,7 +12,11 @@ from functools import lru_cache
 from typing import Final
 
 import structlog
-from google.cloud import storage
+
+# ``google.cloud`` is a PEP 420 namespace package, so mypy can't see
+# ``storage`` as a genuine attribute even though it resolves at runtime.
+# This is an SDK typing limitation, not a code smell — scoped ignore.
+from google.cloud import storage  # type: ignore[attr-defined]
 
 from app.core.config import settings
 

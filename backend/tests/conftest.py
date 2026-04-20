@@ -19,6 +19,7 @@ from fastapi.testclient import TestClient
 
 from app.core.budget import CostGuard, cost_guard
 from app.core.dependencies import get_firestore
+from app.core.recaptcha import verify_recaptcha
 from app.core.security import get_current_user, get_optional_user
 from app.main import app
 
@@ -75,6 +76,11 @@ def authed_client(mock_db: MagicMock) -> TestClient:
     app.dependency_overrides[get_current_user] = _fake_current_user
     app.dependency_overrides[get_optional_user] = _fake_optional_user
     app.dependency_overrides[get_firestore] = lambda: mock_db
+    # Bypass reCAPTCHA verification at the dependency layer so the suite
+    # stays deterministic regardless of the developer's local ``.env``
+    # (``EP_RECAPTCHA_SECRET_KEY`` set in dev would otherwise require every
+    # test to forge a ``X-Recaptcha-Token`` header).
+    app.dependency_overrides[verify_recaptcha] = lambda: None
 
     with TestClient(app, raise_server_exceptions=False) as client:
         yield client

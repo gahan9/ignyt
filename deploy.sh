@@ -29,11 +29,12 @@ gcloud run deploy "$SERVICE_NAME" \
   --memory 512Mi \
   --allow-unauthenticated \
   --set-env-vars "EP_GCP_PROJECT_ID=$PROJECT_ID" \
-  --update-secrets "EP_GEMINI_API_KEY=${GEMINI_SECRET}:latest"
+  --update-secrets "EP_GEMINI_API_KEY=${GEMINI_SECRET}:latest,EP_RECAPTCHA_SECRET_KEY=ignyt-recaptcha-key:latest"
 cd ..
 
 echo "=== Building frontend ==="
 cd frontend
+export VITE_RECAPTCHA_SITE_KEY="6LeYTMEsAAAAAGfjx77BsrfJUga1y94YyW5zk-Ky"
 npm run build
 cd ..
 

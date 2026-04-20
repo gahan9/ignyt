@@ -13,13 +13,17 @@ export class ApiError extends Error {
   }
 }
 
-async function getHeaders(): Promise<HeadersInit> {
-  const headers: HeadersInit = { "Content-Type": "application/json" };
+async function getHeaders(recaptchaToken?: string | null): Promise<HeadersInit> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
 
   const user = auth.currentUser;
   if (user) {
     const token = await user.getIdToken();
     headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  if (recaptchaToken) {
+    headers["X-Recaptcha-Token"] = recaptchaToken;
   }
 
   return headers;
@@ -67,10 +71,11 @@ export async function apiPost<T>(
   path: string,
   body: unknown,
   signal?: AbortSignal,
+  recaptchaToken?: string | null,
 ): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     method: "POST",
-    headers: await getHeaders(),
+    headers: await getHeaders(recaptchaToken),
     body: JSON.stringify(body),
     signal,
   });
@@ -83,10 +88,11 @@ export async function apiStreamPost(
   body: unknown,
   onChunk: (text: string) => void,
   signal?: AbortSignal,
+  recaptchaToken?: string | null,
 ): Promise<void> {
   const res = await fetch(`${API_BASE}${path}`, {
     method: "POST",
-    headers: await getHeaders(),
+    headers: await getHeaders(recaptchaToken),
     body: JSON.stringify(body),
     signal,
   });

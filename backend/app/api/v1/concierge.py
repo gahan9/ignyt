@@ -5,6 +5,7 @@ from typing import Any
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 
+from app.core.recaptcha import verify_recaptcha
 from app.core.security import get_current_user
 from app.models.common import ErrorResponse
 from app.models.concierge import ConciergeRequest
@@ -55,6 +56,7 @@ router = APIRouter(prefix="/concierge", tags=["concierge"])
 async def concierge_chat(
     body: ConciergeRequest,
     _user: dict[str, Any] = Depends(get_current_user),
+    _recaptcha: dict[str, Any] | None = Depends(verify_recaptcha),
 ) -> StreamingResponse:
     """Stream an AI concierge response for the given conversation history."""
     messages = [{"role": m.role, "content": m.content} for m in body.messages]

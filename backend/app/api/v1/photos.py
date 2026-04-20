@@ -10,6 +10,7 @@ from google.cloud.firestore_v1 import AsyncClient
 from app.core.budget import cost_guard
 from app.core.config import settings
 from app.core.dependencies import get_firestore
+from app.core.recaptcha import verify_recaptcha
 from app.core.security import get_current_user
 from app.models.common import ErrorResponse
 from app.models.photos import (
@@ -60,6 +61,7 @@ router = APIRouter(prefix="/photos", tags=["photos"])
 async def get_upload_url(
     body: SignedUrlRequest,
     _user: dict[str, Any] = Depends(get_current_user),
+    _recaptcha: dict[str, Any] | None = Depends(verify_recaptcha),
 ) -> SignedUrlResponse:
     """Generate a signed URL for direct upload to GCS."""
     bucket = f"{settings.gcp_project_id}.appspot.com"
@@ -111,6 +113,7 @@ async def label_photo(
     body: LabelRequest,
     user: dict[str, Any] = Depends(get_current_user),
     db: AsyncClient = Depends(get_firestore),
+    _recaptcha: dict[str, Any] | None = Depends(verify_recaptcha),
 ) -> LabelResponse:
     """Run Vision API label detection on an uploaded photo, save to Firestore."""
     if not cost_guard.check_vision():

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import { apiPost } from "@/lib/api";
 import { useCollection } from "@/hooks/useFirestore";
+import { useRecaptcha } from "@/hooks/useRecaptcha";
 import { DEMO_EVENT_ID } from "@/lib/constants";
 import type { Photo } from "@/types";
 
@@ -20,6 +21,7 @@ export default function PhotoBoard() {
   // on an unmounted tree (React warning + memory leak).
   const abortRef = useRef<AbortController | null>(null);
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const getRecaptchaToken = useRecaptcha();
 
   const { docs: photos, loading } = useCollection<Photo>(
     `events/${DEMO_EVENT_ID}/photos`,
@@ -58,6 +60,7 @@ export default function PhotoBoard() {
       setStatus("Getting upload URL...");
 
       try {
+        const rcToken = await getRecaptchaToken("photo_upload");
         const { upload_url, gcs_uri } = await apiPost<{
           upload_url: string;
           gcs_uri: string;
@@ -69,6 +72,7 @@ export default function PhotoBoard() {
             content_type: file.type || "image/jpeg",
           },
           controller.signal,
+          rcToken,
         );
 
         setStatus("Uploading to Cloud Storage...");
@@ -80,10 +84,12 @@ export default function PhotoBoard() {
         });
 
         setStatus("Analyzing with Vision API...");
+        const labelToken = await getRecaptchaToken("photo_label");
         const { labels } = await apiPost<{ labels: string[]; photo_id: string }>(
           "/v1/photos/label",
           { event_id: DEMO_EVENT_ID, gcs_uri },
           controller.signal,
+          labelToken,
         );
 
         setStatus(`Done! Labels: ${labels.join(", ") || "none detected"}`);
@@ -103,7 +109,7 @@ export default function PhotoBoard() {
         }
       }
     },
-    [scheduleStatusClear],
+    [scheduleStatusClear, getRecaptchaToken],
   );
 
   return (

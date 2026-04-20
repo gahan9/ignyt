@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 
 import { apiStreamPost } from "@/lib/api";
+import { useRecaptcha } from "@/hooks/useRecaptcha";
 import type { ChatMessage } from "@/types";
 
 export default function ConciergeChat() {
@@ -8,6 +9,7 @@ export default function ConciergeChat() {
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const getRecaptchaToken = useRecaptcha();
 
   const scrollToBottom = useCallback(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -51,6 +53,7 @@ export default function ConciergeChat() {
     };
 
     try {
+      const rcToken = await getRecaptchaToken("concierge_chat");
       await apiStreamPost(
         "/v1/concierge/chat",
         {
@@ -63,6 +66,8 @@ export default function ConciergeChat() {
           appendToAssistant(chunk);
           scrollToBottom();
         },
+        undefined,
+        rcToken,
       );
     } catch (err) {
       const msg = err instanceof Error ? err.message : "unknown error";
@@ -71,7 +76,7 @@ export default function ConciergeChat() {
       setStreaming(false);
       scrollToBottom();
     }
-  }, [input, messages, streaming, scrollToBottom]);
+  }, [input, messages, streaming, scrollToBottom, getRecaptchaToken]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {

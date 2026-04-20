@@ -45,7 +45,7 @@ gcloud run deploy ignyt-api `
   --timeout 300 `
   --allow-unauthenticated `
   --set-env-vars "EP_GCP_PROJECT_ID=$FrontendProjectId,EP_CORS_ORIGINS=https://$FrontendProjectId.web.app;https://$FrontendProjectId.firebaseapp.com" `
-  --set-secrets "EP_GEMINI_API_KEY=ignyt-gemini-key:latest"
+  --set-secrets "EP_GEMINI_API_KEY=ignyt-gemini-key:latest,EP_RECAPTCHA_SECRET_KEY=ignyt-recaptcha-key:latest"
 if ($LASTEXITCODE -ne 0) { Write-Error "Cloud Run deployment failed"; exit 1 }
 
 $BackendUrl = gcloud run services describe ignyt-api `
@@ -55,8 +55,8 @@ Set-Location ..
 if (Get-Command npm -ErrorAction SilentlyContinue) {
     Write-Host "=== Building frontend (Targeting: $BackendUrl) ===" -ForegroundColor Cyan
     Set-Location frontend
-    # Inject backend URL into frontend build
     $env:VITE_API_URL = "$BackendUrl/api/v1"
+    $env:VITE_RECAPTCHA_SITE_KEY = "6LeYTMEsAAAAAGfjx77BsrfJUga1y94YyW5zk-Ky"
     npm install
     npm run build
     if ($LASTEXITCODE -ne 0) { Write-Error "Frontend build failed"; exit 1 }

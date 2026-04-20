@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     rate_limit_capacity: int = 60
     rate_limit_refill_per_sec: float = 1.0
 
+    recaptcha_secret_key: str = ""
+    recaptcha_score_threshold: float = 0.5
+
     model_config = SettingsConfigDict(env_file=".env", env_prefix="EP_")
 
     @field_validator("cors_origins", mode="before")

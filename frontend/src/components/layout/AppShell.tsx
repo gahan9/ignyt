@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { NavLink, Route, Routes } from "react-router-dom";
 
 import { useAuth } from "@/hooks/useAuth";
@@ -55,6 +55,21 @@ export function AppShell() {
     setUserMenuOpen(false);
     await signOut();
   }, [signOut]);
+
+  // WCAG 2.1.2 (No Keyboard Trap) + 2.4.3 (Focus Order):
+  // Pressing Escape should dismiss any open transient surface (the user
+  // dropdown or the mobile nav) without forcing a tab-out.
+  useEffect(() => {
+    if (!userMenuOpen && !mobileOpen) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setUserMenuOpen(false);
+        setMobileOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [userMenuOpen, mobileOpen]);
 
   return (
     <div className="min-h-screen bg-gray-50">

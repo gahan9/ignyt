@@ -10,17 +10,17 @@ import os
 # Set BEFORE importing ``app.main`` so the middleware is never installed.
 os.environ.setdefault("EP_RATE_LIMIT_ENABLED", "false")
 
-from collections.abc import AsyncIterator  # noqa: E402
-from typing import Any  # noqa: E402
-from unittest.mock import AsyncMock, MagicMock  # noqa: E402
+from collections.abc import AsyncIterator
+from typing import Any
+from unittest.mock import AsyncMock, MagicMock
 
-import pytest  # noqa: E402
-from fastapi.testclient import TestClient  # noqa: E402
+import pytest
+from fastapi.testclient import TestClient
 
-from app.core.budget import CostGuard, cost_guard  # noqa: E402
-from app.core.dependencies import get_firestore  # noqa: E402
-from app.core.security import get_current_user, get_optional_user  # noqa: E402
-from app.main import app  # noqa: E402
+from app.core.budget import CostGuard, cost_guard
+from app.core.dependencies import get_firestore
+from app.core.security import get_current_user, get_optional_user
+from app.main import app
 
 
 async def async_iter_from_list(items: list[Any]) -> AsyncIterator[Any]:

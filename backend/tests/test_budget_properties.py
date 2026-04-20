@@ -16,7 +16,8 @@ from __future__ import annotations
 from datetime import UTC, date, datetime, timedelta
 from unittest.mock import patch
 
-from hypothesis import HealthCheck, given, settings, strategies as st
+from hypothesis import HealthCheck, given, settings
+from hypothesis import strategies as st
 
 from app.core.budget import CostGuard, InMemoryBackend
 from app.core.config import settings as app_settings

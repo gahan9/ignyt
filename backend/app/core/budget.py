@@ -40,28 +40,36 @@ class CostGuardBackend(ABC):
     """
 
     @abstractmethod
-    def get_gemini(self) -> int: ...
+    def get_gemini(self) -> int:
+        """Return the current Gemini call count for the active day."""
 
     @abstractmethod
-    def set_gemini(self, value: int) -> None: ...
+    def set_gemini(self, value: int) -> None:
+        """Set the Gemini call count (used by the rollover reset)."""
 
     @abstractmethod
-    def incr_gemini(self) -> int: ...
+    def incr_gemini(self) -> int:
+        """Atomically add 1 to the Gemini counter and return the new value."""
 
     @abstractmethod
-    def get_vision(self) -> int: ...
+    def get_vision(self) -> int:
+        """Return the current Vision call count for the active day."""
 
     @abstractmethod
-    def set_vision(self, value: int) -> None: ...
+    def set_vision(self, value: int) -> None:
+        """Set the Vision call count (used by the rollover reset)."""
 
     @abstractmethod
-    def incr_vision(self) -> int: ...
+    def incr_vision(self) -> int:
+        """Atomically add 1 to the Vision counter and return the new value."""
 
     @abstractmethod
-    def get_reset_date(self) -> date: ...
+    def get_reset_date(self) -> date:
+        """Return the UTC date the counters were last reset on."""
 
     @abstractmethod
-    def set_reset_date(self, value: date) -> None: ...
+    def set_reset_date(self, value: date) -> None:
+        """Set the UTC reset date (called on midnight rollover)."""
 
 
 class InMemoryBackend(CostGuardBackend):
@@ -73,34 +81,35 @@ class InMemoryBackend(CostGuardBackend):
     """
 
     def __init__(self) -> None:
+        """Initialise the counters at zero and stamp today's UTC reset date."""
         self._gemini = 0
         self._vision = 0
         self._reset_date = _today_utc()
 
-    def get_gemini(self) -> int:
+    def get_gemini(self) -> int:  # noqa: D102 -- ABC-docstring inherited
         return self._gemini
 
-    def set_gemini(self, value: int) -> None:
+    def set_gemini(self, value: int) -> None:  # noqa: D102
         self._gemini = value
 
-    def incr_gemini(self) -> int:
+    def incr_gemini(self) -> int:  # noqa: D102
         self._gemini += 1
         return self._gemini
 
-    def get_vision(self) -> int:
+    def get_vision(self) -> int:  # noqa: D102
         return self._vision
 
-    def set_vision(self, value: int) -> None:
+    def set_vision(self, value: int) -> None:  # noqa: D102
         self._vision = value
 
-    def incr_vision(self) -> int:
+    def incr_vision(self) -> int:  # noqa: D102
         self._vision += 1
         return self._vision
 
-    def get_reset_date(self) -> date:
+    def get_reset_date(self) -> date:  # noqa: D102
         return self._reset_date
 
-    def set_reset_date(self, value: date) -> None:
+    def set_reset_date(self, value: date) -> None:  # noqa: D102
         self._reset_date = value
 
 

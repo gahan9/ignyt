@@ -52,9 +52,10 @@ _BYPASS_PREFIXES: Final[tuple[str, ...]] = (
 class TokenBucket:
     """Classic token-bucket: ``capacity`` tokens, refill at ``refill_per_sec``."""
 
-    __slots__ = ("capacity", "refill_per_sec", "_tokens", "_last_refill", "_lock")
+    __slots__ = ("_last_refill", "_lock", "_tokens", "capacity", "refill_per_sec")
 
     def __init__(self, capacity: int, refill_per_sec: float) -> None:
+        """Initialise the bucket full (``capacity`` tokens available)."""
         self.capacity = float(capacity)
         self.refill_per_sec = refill_per_sec
         self._tokens = float(capacity)
@@ -98,6 +99,7 @@ class RateLimiterMiddleware(BaseHTTPMiddleware):
         refill_per_sec: float = 1.0,
         max_buckets: int = 10_000,
     ) -> None:
+        """Configure the per-identity throttle and its backing dict."""
         super().__init__(app)  # type: ignore[arg-type]
         self._capacity = capacity
         self._refill = refill_per_sec
@@ -107,6 +109,7 @@ class RateLimiterMiddleware(BaseHTTPMiddleware):
 
     @staticmethod
     def _identity_key(request: Request) -> str:
+        """Derive a per-request identity key (hashed JWT or client IP)."""
         auth = request.headers.get("authorization", "")
         if auth.lower().startswith("bearer "):
             token = auth[len("bearer ") :].strip()
@@ -146,6 +149,7 @@ class RateLimiterMiddleware(BaseHTTPMiddleware):
         request: Request,
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
+        """Admit or 429 each request based on the identity's bucket state."""
         path = request.url.path
         if any(path.startswith(p) for p in _BYPASS_PREFIXES):
             return await call_next(request)

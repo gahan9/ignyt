@@ -34,9 +34,10 @@ export default defineConfig({
         "src/**/__tests__/**",
         "src/**/index.ts",
       ],
-      // Soft target. CI inspects coverage-summary.json and emits a warning
-      // under 60%; it does not fail the build. Raise to a hard threshold
-      // once we're consistently above target.
+      // Hard gate enforced in CI: ``coverage-summary.json`` is read by the
+      // workflow and the build fails under 60% line coverage. Local runs
+      // still pass if you're below target; ratchet by editing the CI
+      // threshold and the comment together.
     },
   },
 });

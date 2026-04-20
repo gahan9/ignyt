@@ -63,16 +63,20 @@ jobs:
             --cov-report=html \
             --junitxml=junit.xml
 
-      - name: Coverage threshold (soft 70%)
-        if: always()
+      - name: Coverage threshold (hard 70%)
+        # Hard gate: PR fails if backend line coverage drops below 70%.
+        # We previously emitted a warning here; flipping to ``sys.exit(1)``
+        # makes the gate enforceable and gives reviewers a binary signal.
         run: |
           python -c "
           import xml.etree.ElementTree as ET, sys
           root = ET.parse('coverage.xml').getroot()
           pct = float(root.attrib.get('line-rate', 0)) * 100
-          print(f'Backend coverage: {pct:.1f}%')
-          if pct < 70:
-              print(f'::warning title=Backend coverage below 70%::{pct:.1f}% < 70% target')
+          target = 70.0
+          print(f'Backend coverage: {pct:.1f}% (target: {target}%)')
+          if pct < target:
+              print(f'::error title=Backend coverage below target::{pct:.1f}% < {target}% — add tests or justify the regression')
+              sys.exit(1)
           "
 
       - name: Upload coverage artifact
@@ -150,20 +154,25 @@ jobs:
       - name: Run tests with coverage
         run: npm test -- --coverage --reporter=default --reporter=junit --outputFile=junit.xml
 
-      - name: Coverage threshold (soft 60%)
-        if: always()
+      - name: Coverage threshold (hard 60%)
+        # Hard gate: PR fails if frontend line coverage drops below 60%.
+        # 60% reflects today's component reality; bump in 5% steps as the
+        # suite matures.
         run: |
           if [ -f coverage/coverage-summary.json ]; then
             node -e "
               const s = require('./coverage/coverage-summary.json').total;
               const pct = s.lines.pct;
-              console.log('Frontend line coverage:', pct + '%');
-              if (pct < 60) {
-                console.log('::warning title=Frontend coverage below 60%::' + pct + '% < 60% target');
+              const target = 60;
+              console.log('Frontend line coverage: ' + pct + '% (target: ' + target + '%)');
+              if (pct < target) {
+                console.log('::error title=Frontend coverage below target::' + pct + '% < ' + target + '% — add tests or justify the regression');
+                process.exit(1);
               }
             "
           else
-            echo "::warning title=Coverage summary missing::coverage/coverage-summary.json not produced"
+            echo "::error title=Coverage summary missing::coverage/coverage-summary.json not produced"
+            exit 1
           fi
 
       - name: Upload coverage artifact

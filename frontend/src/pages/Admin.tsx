@@ -168,7 +168,7 @@ export default function AdminPage() {
 
       <section className="flex flex-wrap items-center gap-2 print:hidden">
         <div className="relative flex-1 min-w-[220px]">
-          <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
           <input
             type="search"
             value={filter}
@@ -278,7 +278,7 @@ function AttendeeCard({ attendee, onToggle }: AttendeeCardProps) {
             {attendee.name}
           </h3>
           <p className="truncate text-xs text-gray-500">{attendee.email}</p>
-          <p className="mt-0.5 font-mono text-[10px] uppercase tracking-wide text-gray-400">
+          <p className="mt-0.5 font-mono text-[10px] uppercase tracking-wide text-gray-600">
             {attendee.id}
           </p>
         </div>
@@ -306,7 +306,7 @@ function AttendeeCard({ attendee, onToggle }: AttendeeCardProps) {
             className="h-36 w-36"
           />
         ) : (
-          <div className="flex h-36 w-36 items-center justify-center text-xs text-gray-400">
+          <div className="flex h-36 w-36 items-center justify-center text-xs text-gray-600">
             generating…
           </div>
         )}

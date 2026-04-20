@@ -146,9 +146,9 @@ export default function PhotoBoard() {
       </div>
 
       {loading ? (
-        <p className="text-sm text-gray-400">Loading photos...</p>
+        <p className="text-sm text-gray-600">Loading photos...</p>
       ) : photos.length === 0 ? (
-        <p className="text-sm text-gray-400">No photos yet. Upload the first one!</p>
+        <p className="text-sm text-gray-600">No photos yet. Upload the first one!</p>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {photos.map((photo) => (
@@ -174,7 +174,7 @@ export default function PhotoBoard() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-gray-400">No labels</p>
+                  <p className="text-xs text-gray-600">No labels</p>
                 )}
               </div>
             </div>

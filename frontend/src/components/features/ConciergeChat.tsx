@@ -107,7 +107,7 @@ export default function ConciergeChat() {
           <div className="flex h-full items-center justify-center">
             <div className="text-center">
               <p className="text-3xl mb-2">🤖</p>
-              <p className="text-sm text-gray-400">
+              <p className="text-sm text-gray-600">
                 Hi! I know everything about this event. Ask me anything.
               </p>
             </div>

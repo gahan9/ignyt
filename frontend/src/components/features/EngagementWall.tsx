@@ -163,9 +163,9 @@ function QuestionBoard({ eventId, sessionId }: EngagementWallProps) {
       ) : null}
 
       {loading ? (
-        <p className="text-sm text-gray-400">Loading questions...</p>
+        <p className="text-sm text-gray-600">Loading questions...</p>
       ) : questions.length === 0 ? (
-        <p className="text-sm text-gray-400">No questions yet. Be the first!</p>
+        <p className="text-sm text-gray-600">No questions yet. Be the first!</p>
       ) : (
         <ul className="space-y-2 max-h-80 overflow-y-auto">
           {questions.map((q) => (
@@ -174,7 +174,7 @@ function QuestionBoard({ eventId, sessionId }: EngagementWallProps) {
               className="rounded-lg bg-gray-50 px-3 py-2"
             >
               <p className="text-sm text-gray-800">{q.text}</p>
-              <p className="mt-1 text-xs text-gray-400">{q.userName}</p>
+              <p className="mt-1 text-xs text-gray-600">{q.userName}</p>
             </li>
           ))}
         </ul>

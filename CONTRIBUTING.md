@@ -29,6 +29,12 @@ cd frontend
 npm run dev
 ```
 
+**reCAPTCHA (optional for local dev):** The backend and frontend both skip
+reCAPTCHA verification when their respective keys are empty. To test the full
+flow locally, set `EP_RECAPTCHA_SECRET_KEY` in `backend/.env` and
+`VITE_RECAPTCHA_SITE_KEY` in `frontend/.env.local`. See
+[README.md § reCAPTCHA](./README.md#recaptcha-v3-bot-protection) for details.
+
 ## Running tests before pushing
 
 ```powershell
@@ -112,7 +118,8 @@ Before marking ready for review:
 - [ ] Docs updated: `README.md`, `docs/API.md`, `docs/ARCHITECTURE.md`,
       or `docs/TESTING.md` — whichever applies.
 - [ ] No new TODO / FIXME without a linked issue.
-- [ ] No `.env` files, API keys, or service-account JSON committed.
+- [ ] No `.env` files, API keys, reCAPTCHA secret keys, or service-account
+      JSON committed.
 
 ## What requires review from a maintainer
 
@@ -122,7 +129,7 @@ Anything in these categories needs a maintainer approval (not just auto-merge):
 2. **New backend dependencies** (`backend/pyproject.toml`).
 3. **New frontend dependencies** that are not devDependencies.
 4. **CI workflow changes** (`.github/workflows/*.yml`).
-5. **IAM / GCP config** (`bootstrap.ps1`, `deploy.ps1`).
+5. **IAM / GCP config / Secret Manager changes** (`bootstrap.ps1`, `deploy.ps1`).
 6. **Breaking API changes** — bump `/api/v1` to `/api/v2` instead.
 
 ## Reporting bugs

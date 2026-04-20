@@ -136,7 +136,7 @@ cd backend
 python -m venv .venv
 .venv\Scripts\activate          # Linux/Mac: source .venv/bin/activate
 pip install -e ".[dev]"
-cp .env.example .env            # fill in your values
+cp .env.example .env            # fill in your values (incl. EP_RECAPTCHA_SECRET_KEY)
 uvicorn app.main:app --reload --port 8080
 ```
 
@@ -145,7 +145,7 @@ uvicorn app.main:app --reload --port 8080
 ```bash
 cd frontend
 npm install
-cp .env.example .env.local      # fill in Firebase config; leave VITE_API_URL blank in dev
+cp .env.example .env.local      # fill in Firebase config + VITE_RECAPTCHA_SITE_KEY
 npm run dev
 ```
 
@@ -233,9 +233,31 @@ bash deploy.sh         # Linux/macOS
 ```
 
 `deploy.ps1` pushes a new backend container to Cloud Run in `ignyt-493612`,
-rebuilds the frontend with the correct Cloud Run URL wired in, and deploys
-Firebase Hosting + Firestore rules/indexes in `ignyt-39f6e`. Assumes
-`bootstrap.ps1` has already run successfully at least once.
+mounts secrets (`ignyt-gemini-key`, `ignyt-recaptcha-key`) from Secret
+Manager, rebuilds the frontend with the Cloud Run URL and reCAPTCHA site key
+wired in, and deploys Firebase Hosting + Firestore rules/indexes in
+`ignyt-39f6e`. Assumes `bootstrap.ps1` has already run successfully at least
+once.
+
+## reCAPTCHA v3 (bot protection)
+
+Billable endpoints (concierge chat, photo upload, Vision labeling) are
+protected by invisible reCAPTCHA v3 — no user interaction required.
+
+| Component | Env var | Where |
+|-----------|---------|-------|
+| Frontend (public site key) | `VITE_RECAPTCHA_SITE_KEY` | `frontend/.env.local` |
+| Backend (secret key) | `EP_RECAPTCHA_SECRET_KEY` | `backend/.env` (local) or Secret Manager (prod) |
+| Score threshold | `EP_RECAPTCHA_SCORE_THRESHOLD` | Defaults to `0.5` |
+
+**Local dev:** both keys can be left empty — reCAPTCHA is silently skipped
+when unconfigured. Set them to test the full flow locally.
+
+**Production:** the secret key is stored in Secret Manager
+(`ignyt-recaptcha-key`) and mounted as an env var on Cloud Run by the deploy
+scripts. The site key is injected into the frontend build at deploy time.
+
+To register new keys: <https://www.google.com/recaptcha/admin> (choose v3).
 
 ## Budget Controls ($3 Cap)
 
@@ -252,7 +274,7 @@ Firebase Hosting + Firestore rules/indexes in `ignyt-39f6e`. Assumes
 ├── backend/                 Python FastAPI server
 │   ├── app/
 │   │   ├── api/v1/          Route handlers
-│   │   ├── core/            Config, auth, budget guard
+│   │   ├── core/            Config, auth, budget guard, reCAPTCHA
 │   │   ├── models/          Pydantic schemas
 │   │   ├── services/        Gemini, Vision, Storage wrappers
 │   │   └── repositories/    Firestore data access

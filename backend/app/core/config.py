@@ -7,10 +7,10 @@ mounted as env vars at deploy time.
 """
 
 import json
-from typing import Any
+from typing import Annotated, Any
 
 from pydantic import field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -19,10 +19,11 @@ class Settings(BaseSettings):
     gcp_project_id: str = "ignyt-dev"
     gemini_api_key: str = ""
 
-    # Typed as Any to prevent pydantic-settings from eagerly trying (and
-    # failing) to parse semicolon-separated strings as JSON. The
-    # validator below handles the actual conversion to list[str].
-    cors_origins: Any = ["http://localhost:5173"]
+    # ``NoDecode`` keeps pydantic-settings from eagerly JSON-parsing the
+    # env value; our ``mode="before"`` validator owns the conversion and
+    # accepts both JSON arrays and ``;``-separated strings (the shape
+    # emitted by ``gcloud run deploy --set-env-vars``).
+    cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:5173"]
 
     daily_gemini_requests: int = 100
     max_tokens_per_request: int = 1024
@@ -44,14 +45,15 @@ class Settings(BaseSettings):
     def _assemble_cors_origins(cls, raw: Any) -> list[str]:
         """Accept either a JSON list or a ``;``-separated string from env."""
         if isinstance(raw, list):
-            return raw
+            return [str(origin) for origin in raw]
         if isinstance(raw, str):
             if raw.startswith("["):
                 try:
-                    return json.loads(raw)
+                    parsed = json.loads(raw)
                 except json.JSONDecodeError:
-                    pass
-            # Fallback for raw semicolon-separated strings from gcloud run deploy
+                    parsed = None
+                if isinstance(parsed, list):
+                    return [str(origin) for origin in parsed]
             return [origin.strip() for origin in raw.split(";") if origin.strip()]
         return [str(raw)] if raw else []
 

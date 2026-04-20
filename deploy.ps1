@@ -41,7 +41,7 @@ gcloud run deploy ignyt-api `
   --min-instances 0 `
   --max-instances 2 `
   --cpu-throttling `
-  --memory 1Gi `
+  --memory 512Mi `
   --timeout 300 `
   --allow-unauthenticated `
   --set-env-vars "EP_GCP_PROJECT_ID=$FrontendProjectId,EP_CORS_ORIGINS=https://$FrontendProjectId.web.app;https://$FrontendProjectId.firebaseapp.com" `

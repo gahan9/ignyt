@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import router as v1_router
 from app.core.config import settings
+from app.core.rate_limit import RateLimiterMiddleware
 from app.core.security_headers import SecurityHeadersMiddleware
 from app.models.common import HealthResponse
 
@@ -99,6 +100,19 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
     max_age=600,
 )
+
+# Per-identity throttle: protects billable Gemini/Vision endpoints from a
+# single signed-in user (or a single IP) blowing the daily budget in
+# seconds. Defaults give 60-token burst, 1 token/sec sustained — enough
+# for normal interactive use but tight enough to stop a runaway loop.
+# Disabled in tests via ``EP_RATE_LIMIT_ENABLED=false`` to keep the suite
+# non-flaky.
+if settings.rate_limit_enabled:
+    app.add_middleware(
+        RateLimiterMiddleware,
+        capacity=settings.rate_limit_capacity,
+        refill_per_sec=settings.rate_limit_refill_per_sec,
+    )
 
 # Outer-most middleware so headers are stamped on every response, including
 # the CORS pre-flight responses produced above.

@@ -29,6 +29,14 @@ class Settings(BaseSettings):
     daily_vision_calls: int = 50
     max_photo_uploads_per_user: int = 5
 
+    # Per-identity throttle. Default = 60 burst, 1 token/sec sustained =
+    # 60 requests/min steady state. Tune per environment via env vars.
+    # Setting ``rate_limit_enabled=False`` disables the middleware entirely
+    # (used in pytest, where 60 reqs/min would flake the suite).
+    rate_limit_enabled: bool = True
+    rate_limit_capacity: int = 60
+    rate_limit_refill_per_sec: float = 1.0
+
     model_config = SettingsConfigDict(env_file=".env", env_prefix="EP_")
 
     @field_validator("cors_origins", mode="before")
